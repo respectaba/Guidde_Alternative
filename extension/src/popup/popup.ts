@@ -9,6 +9,7 @@ const countEl = document.getElementById("count")!;
 const countLabel = document.getElementById("countLabel")!;
 const toggleBtn = document.getElementById("toggle") as HTMLButtonElement;
 const apiBaseInput = document.getElementById("apiBase") as HTMLInputElement;
+const apiTokenInput = document.getElementById("apiToken") as HTMLInputElement;
 const statusEl = document.getElementById("status")!;
 
 let recording = false;
@@ -38,12 +39,16 @@ async function refresh() {
   }
 }
 
-// Load saved API base.
-chrome.storage.local.get("apiBase").then(({ apiBase }) => {
+// Load saved API base + token.
+chrome.storage.local.get(["apiBase", "apiToken"]).then(({ apiBase, apiToken }) => {
   apiBaseInput.value = (apiBase as string) || DEFAULT_API_BASE;
+  apiTokenInput.value = (apiToken as string) || "";
 });
 apiBaseInput.addEventListener("change", () => {
   void chrome.storage.local.set({ apiBase: apiBaseInput.value.trim().replace(/\/$/, "") });
+});
+apiTokenInput.addEventListener("change", () => {
+  void chrome.storage.local.set({ apiToken: apiTokenInput.value.trim() });
 });
 
 toggleBtn.addEventListener("click", async () => {

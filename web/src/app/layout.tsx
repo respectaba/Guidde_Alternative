@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { getSessionUser } from "@/lib/auth";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 export const metadata: Metadata = {
   title: "Guideflow — Step-by-step guide creator",
@@ -8,11 +10,13 @@ export const metadata: Metadata = {
     "Capture, edit, narrate and share step-by-step how-to guides. An open Guidde alternative.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getSessionUser();
+
   return (
     <html lang="en">
       <body>
@@ -23,17 +27,26 @@ export default function RootLayout({
               Guideflow
             </Link>
             <div className="row">
-              <Link href="/import" className="btn ghost small">
-                Import capture
-              </Link>
-              <a
-                href="https://github.com"
-                className="btn small"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Get the extension
-              </a>
+              {user ? (
+                <>
+                  <Link href="/settings" className="btn ghost small">
+                    API tokens
+                  </Link>
+                  <span className="muted" style={{ fontSize: 13 }}>
+                    {user.email}
+                  </span>
+                  <LogoutButton />
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="btn ghost small">
+                    Log in
+                  </Link>
+                  <Link href="/signup" className="btn small primary">
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
           </nav>
           {children}

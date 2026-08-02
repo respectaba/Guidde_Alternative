@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { listGuides } from "@/lib/guides";
+import { getSessionUser } from "@/lib/auth";
 import { DeleteGuideButton } from "@/components/DeleteGuideButton";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const guides = await listGuides();
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  const guides = await listGuides(user.id);
 
   return (
     <main>
@@ -29,7 +33,11 @@ export default async function DashboardPage() {
             <Link href="/import" style={{ color: "var(--accent)" }}>
               import a capture
             </Link>{" "}
-            to get started.
+            to get started. Set up an{" "}
+            <Link href="/settings" style={{ color: "var(--accent)" }}>
+              API token
+            </Link>{" "}
+            to connect the extension.
           </p>
         </div>
       ) : (

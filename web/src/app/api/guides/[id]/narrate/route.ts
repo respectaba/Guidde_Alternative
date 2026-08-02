@@ -8,6 +8,7 @@ import type { NextRequest } from "next/server";
 import { getGuide, updateGuide } from "@/lib/guides";
 import { serverTtsAvailable, synthesize, ttsEngine } from "@/lib/ai/tts";
 import { saveMedia } from "@/lib/media/store";
+import { authenticateRequest } from "@/lib/auth";
 import { error, json, preflight } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,9 @@ export async function GET() {
   return json({ available: serverTtsAvailable(), engine: ttsEngine() });
 }
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await authenticateRequest(req);
+  if (!user) return error("Not authenticated", 401);
   if (!serverTtsAvailable()) {
     return error(
       "Server voiceover is not configured. Set TTS_PROVIDER (openai | elevenlabs | espeak).",
@@ -31,6 +34,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   }
   const guide = await getGuide(params.id);
   if (!guide) return error("Guide not found", 404);
+  if (guide.userId !== user.id) return error("Forbidden", 403);
 
   try {
     const steps = await Promise.all(

@@ -13,6 +13,7 @@ interface GuideRow {
   publicSlug: string;
   isPublic: boolean;
   steps: string;
+  userId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +31,7 @@ function rowToGuide(row: GuideRow): Guide {
     publicSlug: row.publicSlug,
     isPublic: row.isPublic,
     steps,
+    userId: row.userId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -46,8 +48,11 @@ export interface GuideSummary {
   updatedAt: string;
 }
 
-export async function listGuides(): Promise<GuideSummary[]> {
-  const rows = await prisma.guide.findMany({ orderBy: { updatedAt: "desc" } });
+export async function listGuides(userId: string): Promise<GuideSummary[]> {
+  const rows = await prisma.guide.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+  });
   return rows.map((row) => {
     const guide = rowToGuide(row as GuideRow);
     return {
@@ -72,13 +77,17 @@ export async function getGuideBySlug(slug: string): Promise<Guide | null> {
   return row ? rowToGuide(row as GuideRow) : null;
 }
 
-export async function createGuide(input: CreateGuideInput): Promise<Guide> {
+export async function createGuide(
+  input: CreateGuideInput,
+  userId: string,
+): Promise<Guide> {
   const row = await prisma.guide.create({
     data: {
       title: input.title,
       publicSlug: nanoid(12),
       isPublic: false,
       steps: JSON.stringify(normalizeStepOrder(input.steps)),
+      userId,
     },
   });
   return rowToGuide(row as GuideRow);

@@ -8,6 +8,7 @@ import type { Step } from "@guide/shared/types";
 import { generateCaption } from "@guide/shared/captions";
 import {
   getApiBase,
+  getApiToken,
   type RuntimeMessage,
   type StateResponse,
   type StopResponse,
@@ -83,13 +84,20 @@ async function submitGuide(): Promise<StopResponse> {
     return { ok: false, error: "No steps captured." };
   }
   const base = await getApiBase();
+  const token = await getApiToken();
+  if (!token) {
+    return { ok: false, error: "No API token set. Add one from the web app's API tokens page." };
+  }
   const title = `Captured guide — ${new Date().toLocaleString()}`;
   try {
     const res = await fetch(`${base}/api/guides`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ title, steps: session.buffer }),
     });
+    if (res.status === 401) {
+      return { ok: false, error: "API token rejected. Create a new one in the web app." };
+    }
     if (!res.ok) {
       return { ok: false, error: `Server responded ${res.status}` };
     }

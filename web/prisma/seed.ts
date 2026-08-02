@@ -2,12 +2,23 @@
  * Seeds a few demo guides so the entire web experience (dashboard, editor,
  * playback, sharing, PDF export) works end-to-end without the extension.
  */
+import { randomBytes, scryptSync } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { nanoid } from "nanoid";
 import type { Step } from "@guide/shared";
 import { mockScreen } from "./mockScreens";
 
 const prisma = new PrismaClient();
+
+const DEMO_EMAIL = "demo@example.com";
+const DEMO_PASSWORD = "password123";
+
+// Mirror lib/auth.ts hashPassword (scrypt salt:hash) — seed can't import app code.
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
 
 const VIEWPORT = { w: 1280, h: 720, dpr: 1 };
 
@@ -176,11 +187,20 @@ function buildSettingsSteps(): Step[] {
 }
 
 async function main() {
-  console.log("Seeding demo guides…");
+  console.log("Seeding demo user + guides…");
 
-  // Idempotent: clear existing demo rows by known slugs.
+  // Demo account (idempotent).
+  const demo = await prisma.user.upsert({
+    where: { email: DEMO_EMAIL },
+    update: {},
+    create: { email: DEMO_EMAIL, passwordHash: hashPassword(DEMO_PASSWORD) },
+  });
+
+  // Reset this user's demo guides (and any legacy fixed-slug rows) so re-seeding is clean.
   await prisma.guide.deleteMany({
-    where: { publicSlug: { in: ["demo-onboarding", "demo-security"] } },
+    where: {
+      OR: [{ userId: demo.id }, { publicSlug: { in: ["demo-onboarding", "demo-security"] } }],
+    },
   });
 
   await prisma.guide.create({
@@ -188,6 +208,7 @@ async function main() {
       title: "How to create your first project",
       publicSlug: "demo-onboarding",
       isPublic: true,
+      userId: demo.id,
       steps: JSON.stringify(
         buildOnboardingSteps().map((s, i) => ({ ...s, order: i })),
       ),
@@ -199,18 +220,19 @@ async function main() {
       title: "Enabling two-factor authentication",
       publicSlug: "demo-security",
       isPublic: false,
+      userId: demo.id,
       steps: JSON.stringify(
         buildSettingsSteps().map((s, i) => ({ ...s, order: i })),
       ),
     },
   });
 
-  // A third guide with a fresh random slug to show non-demo data too.
   await prisma.guide.create({
     data: {
       title: "Quick tour of the dashboard",
       publicSlug: nanoid(12),
       isPublic: true,
+      userId: demo.id,
       steps: JSON.stringify(
         buildOnboardingSteps()
           .slice(0, 2)
@@ -219,8 +241,8 @@ async function main() {
     },
   });
 
-  const count = await prisma.guide.count();
-  console.log(`Done. ${count} guides in the database.`);
+  const count = await prisma.guide.count({ where: { userId: demo.id } });
+  console.log(`Done. Demo login: ${DEMO_EMAIL} / ${DEMO_PASSWORD} — ${count} guides.`);
 }
 
 main()

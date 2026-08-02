@@ -12,6 +12,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  guides       Guide[]
+  tokens       ApiToken[]
+}
+
+// Personal access tokens used by the Chrome extension to POST captures.
+// Only the sha256 hash is stored; the plaintext is shown once at creation.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+}
+
 model Guide {
   id         String   @id @default(cuid())
   title      String
@@ -19,8 +43,11 @@ model Guide {
   isPublic   Boolean  @default(false)
   // JSON-serialized Step[] (screenshots, click points, annotations, blur regions)
   steps      String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([updatedAt])
+  @@index([userId])
 }

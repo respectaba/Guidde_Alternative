@@ -46,3 +46,8 @@ export async function getApiBase(): Promise<string> {
   const { apiBase } = await chrome.storage.local.get("apiBase");
   return (apiBase as string) || DEFAULT_API_BASE;
 }
+
+export async function getApiToken(): Promise<string> {
+  const { apiToken } = await chrome.storage.local.get("apiToken");
+  return (apiToken as string) || "";
+}
