@@ -68,7 +68,7 @@ async function captureStep(
     screenshot: dataUrl,
     viewport: msg.viewport,
     click: msg.click,
-    caption: generateCaption(msg.element, order),
+    caption: generateCaption(msg.element),
     element: msg.element,
     annotations: [],
     blurRegions: [],
