@@ -21,6 +21,8 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [preview, setPreview] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [narrating, setNarrating] = useState(false);
+  const [narrateMsg, setNarrateMsg] = useState<string | null>(null);
 
   const firstRender = useRef(true);
   const step = guide.steps[activeIndex];
@@ -85,6 +87,27 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [selection, deleteSelection]);
 
+  const generateVoiceover = async () => {
+    setNarrating(true);
+    setNarrateMsg(null);
+    try {
+      const res = await fetch(`/api/guides/${guide.id}/narrate`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.guide) {
+        setGuide(data.guide as Guide);
+        setNarrateMsg(`Voiceover ready (${data.engine}). Press Preview to hear it.`);
+      } else if (res.status === 501) {
+        setNarrateMsg(data.error ?? "Server voiceover isn't configured; playback uses your browser's voice.");
+      } else {
+        setNarrateMsg(data.error ?? "Voiceover failed.");
+      }
+    } catch {
+      setNarrateMsg("Network error generating voiceover.");
+    } finally {
+      setNarrating(false);
+    }
+  };
+
   const onReorder = (steps: Step[]) => {
     const activeId = step?.id;
     setGuide((g) => ({ ...g, steps }));
@@ -121,6 +144,14 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
             {saveState === "saved" && "✓ Saved"}
             {saveState === "error" && "⚠ Save failed"}
           </span>
+          <button
+            className="btn small"
+            onClick={generateVoiceover}
+            disabled={narrating}
+            title="Pre-render narration audio for every step"
+          >
+            {narrating ? "Generating…" : "🎙 Voiceover"}
+          </button>
           <button className="btn small" onClick={() => setPreview((p) => !p)}>
             {preview ? "✎ Edit" : "▶ Preview"}
           </button>
@@ -132,6 +163,22 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
           <ExportButton guide={guide} />
         </div>
       </div>
+
+      {narrateMsg && (
+        <div
+          className="muted"
+          style={{
+            fontSize: 13,
+            padding: "8px 12px",
+            marginBottom: 12,
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            background: "var(--bg-elevated)",
+          }}
+        >
+          {narrateMsg}
+        </div>
+      )}
 
       {preview ? (
         <div style={{ maxWidth: 900, margin: "20px auto" }}>

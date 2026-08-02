@@ -10,6 +10,9 @@ build/
 out/
 *.tsbuildinfo
 
+# generated media (narration audio, exported video)
+web/.media/
+
 # prisma / sqlite
 web/prisma/*.db
 web/prisma/*.db-journal
