@@ -1,0 +1,23 @@
+{
+  "name": "guidde-alternative",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An open-source alternative to Guidde: capture, edit, narrate and share step-by-step how-to guides.",
+  "workspaces": [
+    "packages/*",
+    "web",
+    "extension"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w packages/shared && npm run build -w web",
+    "test": "npm run test -w packages/shared && npm run test -w web",
+    "db:migrate": "npm run db:migrate -w web",
+    "db:seed": "npm run db:seed -w web",
+    "ext:build": "npm run build -w extension",
+    "ext:dev": "npm run dev -w extension"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

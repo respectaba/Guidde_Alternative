@@ -1,0 +1,226 @@
+:root {
+  --bg: #0b0f1a;
+  --bg-elevated: #121826;
+  --bg-panel: #171f30;
+  --border: #263145;
+  --text: #e6e9ef;
+  --text-muted: #9aa4b8;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --danger: #ef4444;
+  --success: #10b981;
+  --radius: 12px;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---- Top nav ---- */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+.nav .brand .logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+.btn:hover {
+  background: var(--bg-panel);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn.primary:hover {
+  background: var(--accent-hover);
+}
+.btn.danger {
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.4);
+  background: transparent;
+}
+.btn.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn.small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* ---- Cards / grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.card .thumb {
+  aspect-ratio: 16 / 9;
+  background: var(--bg-panel);
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.card .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.card .body {
+  padding: 14px 16px;
+}
+.card .body h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.card .meta {
+  color: var(--text-muted);
+  font-size: 13px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge.public {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+.badge.private {
+  background: rgba(154, 164, 184, 0.15);
+  color: var(--text-muted);
+}
+
+.card .actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+/* ---- Empty state ---- */
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text-muted);
+}
+.empty h2 {
+  color: var(--text);
+}
+
+/* ---- Page header ---- */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.page-head h1 {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.muted {
+  color: var(--text-muted);
+}
+
+/* ---- Utility ---- */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.spacer {
+  flex: 1;
+}

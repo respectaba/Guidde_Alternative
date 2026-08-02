@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# prisma / sqlite
+web/prisma/*.db
+web/prisma/*.db-journal
+web/prisma/test.db
+
+# env
+.env
+.env.local
+.env.*.local
+
+# test / coverage
+coverage/
+.vitest/
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+
+# extension build
+extension/dist/

@@ -1,0 +1,116 @@
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.player-stage {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: #0b0f1a;
+}
+
+.player-caption {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+.player-caption .step-index {
+  flex-shrink: 0;
+  font-weight: 800;
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.14);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.player-caption p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.player-controls .rate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.player-controls .rate select {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.player-scrubber {
+  display: flex;
+  gap: 6px;
+}
+.player-scrubber .seg {
+  flex: 1;
+  height: 6px;
+  border: none;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.2s;
+  padding: 0;
+}
+.player-scrubber .seg.done {
+  background: var(--accent-hover);
+}
+.player-scrubber .seg.active {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* ---- click marker ---- */
+.click-dot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.95);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.6);
+}
+.click-ripple {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 3px solid rgba(99, 102, 241, 0.7);
+  animation: clickRipple 1.6s ease-out infinite;
+}
+.click-ripple.delay {
+  animation-delay: 0.8s;
+}
+@keyframes clickRipple {
+  0% {
+    width: 18px;
+    height: 18px;
+    opacity: 0.9;
+  }
+  100% {
+    width: 90px;
+    height: 90px;
+    opacity: 0;
+  }
+}

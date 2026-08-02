@@ -1,0 +1,26 @@
+// Prisma schema for the Guidde alternative.
+// Steps (with screenshots + annotations) are stored as a single JSON blob per
+// guide — they're always read/written as a unit, so a nested document is simpler
+// and faster than fully-normalized rows for this MVP.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Guide {
+  id         String   @id @default(cuid())
+  title      String
+  publicSlug String   @unique
+  isPublic   Boolean  @default(false)
+  // JSON-serialized Step[] (screenshots, click points, annotations, blur regions)
+  steps      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([updatedAt])
+}

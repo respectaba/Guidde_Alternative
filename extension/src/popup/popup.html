@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        width: 280px;
+        margin: 0;
+        padding: 16px;
+        font-family: Inter, -apple-system, system-ui, sans-serif;
+        background: #0b0f1a;
+        color: #e6e9ef;
+      }
+      h1 { font-size: 16px; margin: 0 0 4px; }
+      .sub { color: #9aa4b8; font-size: 12px; margin: 0 0 14px; }
+      .count {
+        font-size: 34px; font-weight: 800; text-align: center;
+        margin: 8px 0; color: #6366f1;
+      }
+      .count small { font-size: 13px; color: #9aa4b8; font-weight: 500; display: block; }
+      button {
+        width: 100%; padding: 10px; border-radius: 8px; border: none;
+        font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px;
+      }
+      .start { background: #6366f1; color: #fff; }
+      .stop { background: #ef4444; color: #fff; }
+      .dot {
+        display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+        background: #ef4444; margin-right: 6px; animation: pulse 1.2s infinite;
+      }
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+      label { font-size: 11px; color: #9aa4b8; display: block; margin: 14px 0 4px; }
+      input {
+        width: 100%; box-sizing: border-box; padding: 7px; border-radius: 6px;
+        border: 1px solid #263145; background: #171f30; color: #e6e9ef; font-size: 12px;
+      }
+      .status { font-size: 12px; margin-top: 12px; min-height: 16px; }
+      .status a { color: #6366f1; }
+      .err { color: #ef4444; }
+    </style>
+  </head>
+  <body>
+    <h1>▶ Guideflow</h1>
+    <p class="sub">Record a click-by-click how-to guide.</p>
+
+    <div class="count"><span id="count">0</span><small id="countLabel">steps captured</small></div>
+
+    <button id="toggle" class="start">● Start recording</button>
+
+    <label for="apiBase">Web app URL</label>
+    <input id="apiBase" type="text" placeholder="http://localhost:3000" />
+
+    <div class="status" id="status"></div>
+
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

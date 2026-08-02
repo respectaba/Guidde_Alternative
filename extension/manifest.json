@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Guideflow — Guide Recorder",
+  "version": "0.1.0",
+  "description": "Capture a click-by-click how-to guide on any website and send it to Guideflow.",
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Guideflow"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.ts"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
