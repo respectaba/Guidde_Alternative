@@ -89,7 +89,12 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
   return (
     <div className="player">
       <div className="player-stage">
-        <StepFrame step={step} animateClick={playing} />
+        <StepFrame
+          key={`${step.id}-${playing ? "play" : "pause"}`}
+          step={step}
+          animateClick={playing}
+          zoomActive={playing}
+        />
       </div>
 
       <div className="player-caption">

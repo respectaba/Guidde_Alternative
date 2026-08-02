@@ -23,6 +23,7 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [narrating, setNarrating] = useState(false);
   const [narrateMsg, setNarrateMsg] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(false);
 
   const firstRender = useRef(true);
   const step = guide.steps[activeIndex];
@@ -108,6 +109,25 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
     }
   };
 
+  const exportVideo = async () => {
+    setRendering(true);
+    setNarrateMsg("Rendering MP4 (frames + zoom + narration)… this can take a bit.");
+    try {
+      const res = await fetch(`/api/guides/${guide.id}/video`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.videoUrl) {
+        setNarrateMsg(`Video ready (${Math.round((data.bytes ?? 0) / 1024)} KB).`);
+        window.open(data.videoUrl, "_blank");
+      } else {
+        setNarrateMsg(data.error ?? "Video export failed.");
+      }
+    } catch {
+      setNarrateMsg("Network error during video export.");
+    } finally {
+      setRendering(false);
+    }
+  };
+
   const onReorder = (steps: Step[]) => {
     const activeId = step?.id;
     setGuide((g) => ({ ...g, steps }));
@@ -160,6 +180,14 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
             publicSlug={guide.publicSlug}
             onToggle={(next) => setGuide((g) => ({ ...g, isPublic: next }))}
           />
+          <button
+            className="btn small"
+            onClick={exportVideo}
+            disabled={rendering}
+            title="Render an MP4 video with zoom and narration"
+          >
+            {rendering ? "Rendering…" : "🎬 Export MP4"}
+          </button>
           <ExportButton guide={guide} />
         </div>
       </div>

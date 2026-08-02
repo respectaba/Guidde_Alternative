@@ -8,6 +8,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "25mb",
     },
+    // Keep native/binary deps out of the webpack bundle (loaded at runtime).
+    serverComponentsExternalPackages: ["@napi-rs/canvas", "ffmpeg-static"],
   },
 };
 

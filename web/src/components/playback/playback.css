@@ -78,6 +78,19 @@
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
 }
 
+/* ---- cinematic Ken-Burns zoom toward the click point (playback) ---- */
+.sf-kenburns {
+  animation: kenburns 6s ease-out forwards;
+}
+@keyframes kenburns {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.18);
+  }
+}
+
 /* ---- click marker ---- */
 .click-dot {
   display: block;
