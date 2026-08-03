@@ -98,22 +98,45 @@ If a browser policy blocks the direct POST, use the **Import capture** page
 ## AI: browser-native by default, real engines optional
 
 Captions and narration work with **zero configuration** (heuristic captions +
-the browser's Web Speech API). Upgrade via `web/.env` (see `.env.example`):
+the browser's Web Speech API).
+
+**Neural voiceover — per-tenant "bring your own key" (recommended).** Each user
+adds their own OpenAI or ElevenLabs key under **Settings** (`/settings` →
+Voiceover). Keys are **encrypted at rest** (AES-256-GCM via `ENCRYPTION_KEY`,
+falling back to `AUTH_SECRET`) and never returned to the client. Per-tenant keys
+mean each account pays for its own usage — the right model for multi-tenant SaaS.
+
+**Resolution order** (per user, in `resolveTtsConfig`): the user's saved key →
+the operator's env key → offline `espeak` → browser. So self-hosting still works
+with a single env key (or offline), and a hosted deployment can require BYO keys:
 
 ```env
-# Richer captions via Claude (falls back to the heuristic on any error)
-AI_PROVIDER=claude
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Server voiceover — pick one:
+# Optional operator fallback used when a user hasn't added their own key:
 TTS_PROVIDER=espeak         # offline, no key (needs the espeak-ng binary)
 # TTS_PROVIDER=openai       # neural; set TTS_API_KEY (+ optional TTS_MODEL/TTS_VOICE)
 # TTS_PROVIDER=elevenlabs   # neural; set TTS_API_KEY
+
+# Richer captions via Claude (falls back to the heuristic on any error)
+AI_PROVIDER=claude
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 - Editor **🎙 Voiceover** pre-renders per-step audio (`POST /api/guides/:id/narrate`);
-  playback then plays the audio track. `/api/ai/caption` and `/api/ai/tts` expose
-  single-shot synthesis. Generated media is served from `/api/media/*`.
+  playback then plays the audio track. `/api/ai/tts` does single-shot synthesis
+  (authenticated; uses the caller's config). Generated media is served from `/api/media/*`.
+- **Proxied networks:** Node's `fetch` ignores `HTTPS_PROXY`, so provider calls
+  route through an undici `ProxyAgent` when `HTTPS_PROXY` is set (`lib/egress.ts`) —
+  no-op otherwise. (Equivalently, run the server with `NODE_USE_ENV_PROXY=1` on
+  Node ≥ 22.21.) A blocked host surfaces as a provider/proxy 403 — check egress policy.
+
+### Verify a real key end-to-end
+
+With the server running and a key set (Settings, or `TTS_API_KEY` in `web/.env`):
+
+```bash
+node scripts/tts-smoke.mjs demo@example.com password123
+# logs in, POSTs /api/ai/tts, writes scratch out.mp3, prints bytes + engine
+```
 
 ## Video export
 

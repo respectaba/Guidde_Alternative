@@ -15,7 +15,7 @@ import type { Guide, Step } from "@guide/shared";
 import { clamp01 } from "@guide/shared";
 import { drawFrame } from "./frame";
 import { mediaDir } from "@/lib/media/store";
-import { serverTtsAvailable, synthesize } from "@/lib/ai/tts";
+import { serverTtsAvailable, synthesize, type TtsConfig } from "@/lib/ai/tts";
 import { saveMedia } from "@/lib/media/store";
 
 const execFileP = promisify(execFile);
@@ -60,7 +60,11 @@ function dataUrlToBuffer(dataUrl: string): Buffer {
 }
 
 /** Resolve the on-disk audio path for a step, synthesizing if needed. */
-async function resolveAudio(guide: Guide, step: Step): Promise<string | null> {
+async function resolveAudio(
+  guide: Guide,
+  step: Step,
+  tts: TtsConfig,
+): Promise<string | null> {
   if (step.audioUrl) {
     const file = step.audioUrl.split("?")[0].split("/").pop();
     if (file) {
@@ -73,8 +77,8 @@ async function resolveAudio(guide: Guide, step: Step): Promise<string | null> {
       }
     }
   }
-  if (serverTtsAvailable()) {
-    const { audio, ext } = await synthesize(step.caption);
+  if (serverTtsAvailable(tts)) {
+    const { audio, ext } = await synthesize(step.caption, tts);
     const url = await saveMedia("audio", guide.id, `${step.id}.${ext}`, audio);
     const file = url.split("/").pop()!;
     return join(mediaDir("audio", guide.id), file);
@@ -87,10 +91,11 @@ async function renderStepSegment(
   step: Step,
   workDir: string,
   index: number,
+  tts: TtsConfig,
 ): Promise<string> {
   const img = await loadImage(dataUrlToBuffer(step.screenshot));
 
-  const audioPath = await resolveAudio(guide, step);
+  const audioPath = await resolveAudio(guide, step, tts);
   const duration =
     (audioPath ? await probeDuration(audioPath) : null) ?? estimateDuration(step.caption);
   const frames = Math.max(1, Math.round(duration * FPS));
@@ -146,13 +151,16 @@ async function renderStepSegment(
   return seg;
 }
 
-export async function exportGuideToVideo(guide: Guide): Promise<Buffer> {
+export async function exportGuideToVideo(
+  guide: Guide,
+  tts: TtsConfig,
+): Promise<Buffer> {
   if (guide.steps.length === 0) throw new Error("Guide has no steps.");
   const workDir = await mkdtemp(join(tmpdir(), "vid-"));
   try {
     const segs: string[] = [];
     for (let i = 0; i < guide.steps.length; i++) {
-      segs.push(await renderStepSegment(guide, guide.steps[i], workDir, i));
+      segs.push(await renderStepSegment(guide, guide.steps[i], workDir, i, tts));
     }
     const listPath = join(workDir, "list.txt");
     await writeFile(listPath, segs.map((s) => `file '${s}'`).join("\n"), "utf8");

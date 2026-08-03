@@ -13,12 +13,26 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
+  id           String      @id @default(cuid())
+  email        String      @unique
   passwordHash String
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime    @default(now())
   guides       Guide[]
   tokens       ApiToken[]
+  ttsSetting   TtsSetting?
+}
+
+// Per-tenant "bring your own key" TTS config. The API key is encrypted at rest
+// (see lib/crypto.ts) and never returned to the client.
+model TtsSetting {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String // "openai" | "elevenlabs"
+  apiKeyEnc String
+  voice     String?
+  model     String?
+  updatedAt DateTime @updatedAt
 }
 
 // Personal access tokens used by the Chrome extension to POST captures.

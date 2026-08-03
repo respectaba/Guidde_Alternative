@@ -8,6 +8,7 @@ import { getGuide } from "@/lib/guides";
 import { exportGuideToVideo } from "@/lib/video/export";
 import { saveMedia } from "@/lib/media/store";
 import { authenticateRequest } from "@/lib/auth";
+import { resolveTtsConfig } from "@/lib/ai/tts";
 import { error, json, preflight } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (guide.userId !== user.id) return error("Forbidden", 403);
 
   try {
-    const mp4 = await exportGuideToVideo(guide);
+    const tts = await resolveTtsConfig(user.id);
+    const mp4 = await exportGuideToVideo(guide, tts);
     const url = await saveMedia("video", guide.id, `guide.mp4`, mp4);
     return json({ videoUrl: `${url}?v=${Date.now()}`, bytes: mp4.length });
   } catch (e) {
