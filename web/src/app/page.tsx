@@ -1,15 +1,25 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { listGuides } from "@/lib/guides";
 import { getSessionUser } from "@/lib/auth";
 import { getActiveWorkspaceId, getRole } from "@/lib/workspace";
+import { prisma } from "@/lib/db";
 import { DeleteGuideButton } from "@/components/DeleteGuideButton";
+import { LandingPage } from "@/components/marketing/LandingPage";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function HomePage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login");
+
+  // Logged-out visitors see the marketing homepage (with a live demo link if a
+  // public guide exists), not a login wall.
+  if (!user) {
+    const demo = await prisma.guide
+      .findFirst({ where: { isPublic: true }, select: { publicSlug: true }, orderBy: { createdAt: "asc" } })
+      .catch(() => null);
+    return <LandingPage demoSlug={demo?.publicSlug} />;
+  }
+
   const workspaceId = await getActiveWorkspaceId(user.id, user.email);
   const role = await getRole(user.id, workspaceId);
   const canEdit = role === "owner" || role === "admin" || role === "editor";

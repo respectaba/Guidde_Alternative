@@ -338,3 +338,164 @@ button {
   padding: 6px 8px;
   font-size: 13px;
 }
+
+/* ================= Marketing landing page ================= */
+.landing {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.lp-hero {
+  text-align: center;
+  padding: 64px 16px 40px;
+}
+.lp-eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 22px;
+}
+.lp-hero h1 {
+  font-size: clamp(30px, 5.2vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 auto 18px;
+  max-width: 900px;
+}
+.lp-grad {
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lp-sub {
+  font-size: clamp(15px, 2vw, 19px);
+  color: var(--text-muted);
+  max-width: 640px;
+  margin: 0 auto 28px;
+  line-height: 1.6;
+}
+.lp-cta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.lp-cta {
+  font-size: 16px;
+  padding: 12px 24px;
+}
+.lp-note {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.lp-section {
+  padding: 48px 16px;
+}
+.lp-h2 {
+  text-align: center;
+  font-size: clamp(22px, 3.2vw, 32px);
+  letter-spacing: -0.02em;
+  margin: 0 auto 36px;
+  max-width: 700px;
+}
+.lp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.lp-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+}
+.lp-card h3 {
+  font-size: 17px;
+  margin: 12px 0 8px;
+}
+.lp-card p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+}
+.lp-icon {
+  font-size: 26px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+.lp-steps-wrap {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.lp-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+}
+.lp-step {
+  text-align: center;
+  padding: 0 12px;
+}
+.lp-step-num {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #a855f7);
+}
+.lp-step h3 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.lp-step p {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+}
+.lp-final {
+  text-align: center;
+  padding: 56px 16px;
+  margin: 24px 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--bg-panel)), var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.lp-final h2 {
+  font-size: clamp(22px, 3.2vw, 30px);
+  margin: 0 0 10px;
+}
+.lp-final p {
+  color: var(--text-muted);
+  margin: 0 0 24px;
+}
+.lp-footer {
+  text-align: center;
+  padding: 32px 16px 48px;
+  color: var(--text-muted);
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+}
