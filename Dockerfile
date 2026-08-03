@@ -32,6 +32,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+# Bind to all interfaces. Docker/Railway set HOSTNAME to the container id, which
+# the Next standalone server would otherwise bind to (unreachable) — pin it.
+ENV HOSTNAME=0.0.0.0
 # Fonts for server-side canvas text (cover/outro slides) rendered by @napi-rs/canvas.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \

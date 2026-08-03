@@ -223,7 +223,8 @@ teammates.
 ## Deployment
 
 A multi-stage **Dockerfile** builds the Next.js **standalone** output; the
-entrypoint runs `prisma migrate deploy` on boot.
+entrypoint runs `prisma migrate deploy` on boot. For a step-by-step hosted
+deploy on **Railway + Supabase** (Postgres + S3 media), see **[DEPLOY.md](./DEPLOY.md)**.
 
 ```bash
 # SQLite, works out of the box (data + media on named volumes):
