@@ -23,6 +23,10 @@ web/prisma/test.db
 .env.local
 .env.*.local
 
+# local secrets scratch (deploy values — never commit)
+railway-env.local.txt
+*.secrets.txt
+
 # test / coverage
 coverage/
 .vitest/
