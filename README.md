@@ -101,10 +101,13 @@ Captions and narration work with **zero configuration** (heuristic captions +
 the browser's Web Speech API).
 
 **Neural voiceover — per-tenant "bring your own key" (recommended).** Each user
-adds their own OpenAI or ElevenLabs key under **Settings** (`/settings` →
-Voiceover). Keys are **encrypted at rest** (AES-256-GCM via `ENCRYPTION_KEY`,
-falling back to `AUTH_SECRET`) and never returned to the client. Per-tenant keys
-mean each account pays for its own usage — the right model for multi-tenant SaaS.
+adds their own OpenAI, ElevenLabs, or Google Cloud TTS key under **Settings**
+(`/settings` → Voiceover). Keys are **encrypted at rest** (AES-256-GCM via
+`ENCRYPTION_KEY`, falling back to `AUTH_SECRET`) and never returned to the client.
+Per-tenant keys mean each account pays for its own usage — the right model for
+multi-tenant SaaS. (Google uses an **API key**, not a service-account JSON; the
+optional Voice field is a Google voice name like `en-US-Neural2-C`, and Model is
+an optional BCP-47 language code.)
 
 **Resolution order** (per user, in `resolveTtsConfig`): the user's saved key →
 the operator's env key → offline `espeak` → browser. So self-hosting still works
@@ -115,6 +118,7 @@ with a single env key (or offline), and a hosted deployment can require BYO keys
 TTS_PROVIDER=espeak         # offline, no key (needs the espeak-ng binary)
 # TTS_PROVIDER=openai       # neural; set TTS_API_KEY (+ optional TTS_MODEL/TTS_VOICE)
 # TTS_PROVIDER=elevenlabs   # neural; set TTS_API_KEY
+# TTS_PROVIDER=google       # neural; set TTS_API_KEY = Google API key
 
 # Richer captions via Claude (falls back to the heuristic on any error)
 AI_PROVIDER=claude

@@ -14,7 +14,7 @@ import { error, json } from "@/lib/http";
 export const dynamic = "force-dynamic";
 
 const putSchema = z.object({
-  provider: z.enum(["openai", "elevenlabs"]),
+  provider: z.enum(["openai", "elevenlabs", "google"]),
   apiKey: z.string().min(8).max(400),
   voice: z.string().max(120).optional(),
   model: z.string().max(120).optional(),

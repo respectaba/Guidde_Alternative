@@ -11,6 +11,10 @@ export default defineConfig({
     env: {
       DATABASE_URL: "file:./test.db",
       NODE_ENV: "test",
+      // Disable the agent proxy in tests so egressFetch uses the (stubbable)
+      // global fetch — the provider tests mock fetch directly.
+      HTTPS_PROXY: "",
+      https_proxy: "",
     },
   },
   resolve: {

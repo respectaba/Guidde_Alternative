@@ -7,6 +7,8 @@
  *   3. offline espeak-ng (TTS_PROVIDER=espeak)             — zero-key
  *   4. browser (Web Speech, client-side)                  — nothing server-side
  *
+ * Neural engines: openai, elevenlabs, google (Cloud Text-to-Speech, API-key auth).
+ *
  * `synthesize(text, config)` then runs the chosen engine. Neural providers'
  * fetches go through egressFetch so they work behind an HTTPS proxy.
  */
@@ -27,7 +29,10 @@ export interface SynthResult {
   mime: string;
 }
 
-export type TtsEngine = "openai" | "elevenlabs" | "espeak" | "browser";
+export type TtsEngine = "openai" | "elevenlabs" | "google" | "espeak" | "browser";
+
+/** Neural providers that authenticate with a single API-key string. */
+const NEURAL_KEY_ENGINES = ["openai", "elevenlabs", "google"] as const;
 
 export interface TtsConfig {
   engine: TtsEngine;
@@ -40,7 +45,7 @@ export interface TtsConfig {
 
 function envEngine(): TtsEngine {
   const p = (process.env.TTS_PROVIDER ?? "browser").toLowerCase();
-  if (p === "openai" || p === "elevenlabs" || p === "espeak") return p;
+  if (p === "openai" || p === "elevenlabs" || p === "google" || p === "espeak") return p;
   if (p === "service") return process.env.TTS_API_KEY ? "openai" : "espeak";
   return "browser";
 }
@@ -66,7 +71,7 @@ export async function resolveTtsConfig(userId?: string): Promise<TtsConfig> {
   }
   // 2. Operator env key.
   const eng = envEngine();
-  if ((eng === "openai" || eng === "elevenlabs") && process.env.TTS_API_KEY) {
+  if ((NEURAL_KEY_ENGINES as readonly string[]).includes(eng) && process.env.TTS_API_KEY) {
     return {
       engine: eng,
       apiKey: process.env.TTS_API_KEY,
@@ -94,6 +99,8 @@ export async function synthesize(text: string, config: TtsConfig): Promise<Synth
       return openaiTts(clean, config);
     case "elevenlabs":
       return elevenLabsTts(clean, config);
+    case "google":
+      return googleTts(clean, config);
     case "espeak":
       return espeakTts(clean, config);
     default:
@@ -138,6 +145,33 @@ async function elevenLabsTts(text: string, config: TtsConfig): Promise<SynthResu
   );
   if (!res.ok) throw new Error(`ElevenLabs TTS ${res.status}: ${await res.text()}`);
   return { audio: Buffer.from(await res.arrayBuffer()), ext: "mp3", mime: "audio/mpeg" };
+}
+
+/**
+ * Google Cloud Text-to-Speech (API-key auth). `voice` is the Google voice name
+ * (e.g. "en-US-Neural2-C"); `model` optionally overrides the BCP-47 language code
+ * (else it's derived from the voice name, defaulting to en-US). Returns base64 MP3.
+ */
+async function googleTts(text: string, config: TtsConfig): Promise<SynthResult> {
+  const voiceName = config.voice?.trim();
+  const languageCode =
+    config.model?.trim() ||
+    (voiceName && /^[a-z]{2}-[A-Z]{2}/.test(voiceName) ? voiceName.slice(0, 5) : undefined) ||
+    "en-US";
+  const voice = voiceName ? { languageCode, name: voiceName } : { languageCode };
+
+  const res = await egressFetch(
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(config.apiKey ?? "")}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ input: { text }, voice, audioConfig: { audioEncoding: "MP3" } }),
+    },
+  );
+  if (!res.ok) throw new Error(`Google TTS ${res.status}: ${await res.text()}`);
+  const data = (await res.json()) as { audioContent?: string };
+  if (!data.audioContent) throw new Error("Google TTS returned no audioContent");
+  return { audio: Buffer.from(data.audioContent, "base64"), ext: "mp3", mime: "audio/mpeg" };
 }
 
 /** Offline engine — no key required. Requires the `espeak-ng` binary on PATH. */

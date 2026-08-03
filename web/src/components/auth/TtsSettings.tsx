@@ -8,14 +8,23 @@ interface Current {
   hasKey: boolean;
 }
 
-const VOICE_HINT: Record<string, string> = {
+type Provider = "openai" | "elevenlabs" | "google";
+
+const VOICE_HINT: Record<Provider, string> = {
   openai: "e.g. alloy, nova, shimmer, echo (optional)",
   elevenlabs: "ElevenLabs voice ID (optional)",
+  google: "e.g. en-US-Neural2-C (optional)",
+};
+
+const MODEL_HINT: Record<Provider, string> = {
+  openai: "model override (optional)",
+  elevenlabs: "model_id (optional)",
+  google: "language code, e.g. en-US (optional)",
 };
 
 export function TtsSettings() {
   const [cur, setCur] = useState<Current | null>(null);
-  const [provider, setProvider] = useState<"openai" | "elevenlabs">("openai");
+  const [provider, setProvider] = useState<Provider>("openai");
   const [apiKey, setApiKey] = useState("");
   const [voice, setVoice] = useState("");
   const [model, setModel] = useState("");
@@ -27,7 +36,9 @@ export function TtsSettings() {
     if (res.ok) {
       const c: Current = await res.json();
       setCur(c);
-      if (c.provider === "openai" || c.provider === "elevenlabs") setProvider(c.provider);
+      if (c.provider === "openai" || c.provider === "elevenlabs" || c.provider === "google") {
+        setProvider(c.provider);
+      }
       setVoice(c.voice ?? "");
       setModel(c.model ?? "");
     }
@@ -83,11 +94,12 @@ export function TtsSettings() {
           Provider
           <select
             value={provider}
-            onChange={(e) => setProvider(e.target.value as "openai" | "elevenlabs")}
+            onChange={(e) => setProvider(e.target.value as Provider)}
             style={sel}
           >
             <option value="openai">OpenAI (gpt-4o-mini-tts)</option>
             <option value="elevenlabs">ElevenLabs</option>
+            <option value="google">Google Cloud TTS</option>
           </select>
         </label>
 
@@ -114,7 +126,7 @@ export function TtsSettings() {
           </label>
           <label className="muted" style={{ fontSize: 13, flex: 1 }}>
             Model (optional)
-            <input value={model} onChange={(e) => setModel(e.target.value)} placeholder="override" style={inp} />
+            <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={MODEL_HINT[provider]} style={inp} />
           </label>
         </div>
 

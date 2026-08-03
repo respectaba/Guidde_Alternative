@@ -1,11 +1,15 @@
 /**
- * Outbound-HTTPS helper. Node's global `fetch` (undici) ignores HTTPS_PROXY, so
- * in proxied environments (this sandbox, many corporate networks) provider calls
- * to OpenAI/ElevenLabs never leave the box. When HTTPS_PROXY is set we route the
- * fetch through an undici ProxyAgent; the proxy's CA is already trusted via
- * NODE_EXTRA_CA_CERTS. No-op (direct fetch) when no proxy is configured.
+ * Outbound-HTTPS helper. Node's global `fetch` (its internal undici) ignores
+ * HTTPS_PROXY, so in proxied environments (this sandbox, many corporate networks)
+ * provider calls to OpenAI/ElevenLabs/Google never leave the box.
+ *
+ * When HTTPS_PROXY is set we route through an undici ProxyAgent — using undici's
+ * OWN fetch, because a ProxyAgent from the npm `undici` package is not accepted as
+ * a `dispatcher` by Node's *internal* undici (UND_ERR_INVALID_ARG). The proxy's
+ * CA is trusted via NODE_EXTRA_CA_CERTS. With no proxy configured this is a plain
+ * global fetch, so production is unaffected.
  */
-import { ProxyAgent } from "undici";
+import { fetch as undiciFetch, ProxyAgent } from "undici";
 
 let cached: ProxyAgent | null | undefined;
 
@@ -19,6 +23,7 @@ function dispatcher(): ProxyAgent | undefined {
 /** fetch() that honors HTTPS_PROXY when present. */
 export function egressFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const d = dispatcher();
-  // `dispatcher` is an undici extension not present in the DOM RequestInit type.
-  return fetch(url, d ? ({ ...init, dispatcher: d } as RequestInit) : init);
+  if (!d) return fetch(url, init);
+  // undici's fetch + its own ProxyAgent (same instance) — Response is compatible.
+  return undiciFetch(url, { ...(init as Record<string, unknown>), dispatcher: d }) as unknown as Promise<Response>;
 }
