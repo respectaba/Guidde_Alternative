@@ -181,9 +181,63 @@ The editor **🎬 Export MP4** button renders the guide to an MP4:
 `@napi-rs/canvas` draws each step's frames (screenshot + annotations + blur +
 click ripple) with an eased Ken-Burns zoom toward the click point, `ffmpeg`
 muxes each with its narration (or synthesizes/silence) and concatenates to a
-`+faststart` H.264/AAC file. `POST /api/guides/:id/video` → `{ videoUrl }`.
-Branded cover and outro segments bookend the steps, and any uploaded
-background-music track is looped and mixed in under the narration.
+`+faststart` H.264/AAC file. Branded cover and outro segments bookend the steps,
+and any uploaded background-music track is looped and mixed in under the narration.
+
+Rendering runs as a **background job** (see below): `POST /api/guides/:id/video`
+enqueues and returns `{ jobId }` (202); the editor polls `GET /api/jobs/:id` for
+progress and opens the video when it's done.
+
+## Team workspaces
+
+Guides belong to a **workspace**, not directly to a user. Every account gets a
+**personal workspace** on signup; you can create **shared workspaces** and invite
+teammates.
+
+- **Roles** (ascending): `viewer` (watch guides) < `editor` (create/edit/delete,
+  narrate, render, upload music) < `admin` (+ invite/remove members, change roles)
+  < `owner` (+ grant owner; the last owner can't be removed). Authorization runs
+  through `lib/workspace.ts` (`canAccessGuide(userId, guide, minRole)`), applied on
+  every guide route and the editor.
+- **Switcher** in the header changes the active workspace (stored in a cookie);
+  the dashboard, new captures, and the extension all target it.
+- **Invites**: existing users are added immediately; new emails get a one-time
+  invite link (`/invite/:token`) to redeem after signing in — no email server
+  required. Manage members at **/workspace**.
+- Legacy guides created before workspaces are **lazily adopted** into their
+  creator's personal workspace on first access, so nothing is orphaned.
+
+## Storage & background jobs
+
+- **Pluggable media storage** (`lib/storage`): `STORAGE_DRIVER=local` (default;
+  writable `.media/` served via `/api/media/*`) or `STORAGE_DRIVER=s3` for any
+  S3-compatible bucket (AWS S3, Cloudflare R2, MinIO). Guides always reference
+  media by the stable `/api/media/...` URL, so switching drivers never rewrites
+  stored data. The S3 SDK is an **optional dependency**, loaded only when enabled.
+- **Job queue** (`lib/jobs`): slow MP4 renders run in a **DB-backed queue** drained
+  by an **in-process worker** (single-flight, kicked on enqueue), so requests never
+  block and job status survives a restart. Fit for a single long-lived Node server;
+  for multi-node, run the same worker loop as a separate process against the shared
+  DB — the queue API is unchanged.
+
+## Deployment
+
+A multi-stage **Dockerfile** builds the Next.js **standalone** output; the
+entrypoint runs `prisma migrate deploy` on boot.
+
+```bash
+# SQLite, works out of the box (data + media on named volumes):
+docker compose up --build            # → http://localhost:3000
+
+# Postgres + S3 (production): first set the datasource provider to "postgresql"
+# in web/prisma/schema.prisma, then:
+docker compose -f docker-compose.postgres.yml up --build
+```
+
+Set `AUTH_SECRET` and `ENCRYPTION_KEY` to long random values, mount a volume for
+`.media` (or use S3), and put a TLS-terminating proxy in front. Prisma pins the
+datasource provider in the schema, so Postgres requires the one-line provider
+change above (plus a Postgres `DATABASE_URL`).
 
 ## Tests
 
@@ -200,10 +254,10 @@ Chromium (Playwright persistent context under `xvfb`); it can't run in plain CI.
 
 ## Tech notes & tradeoffs
 
-- **Persistence:** SQLite via Prisma; `steps` (with base64 screenshots) stored as
-  a JSON column. For production, move screenshots and generated media to object
-  storage (media currently lives in a writable `.media/` dir, served by an API
-  route since `next start` won't serve files added to `public/` after build).
+- **Persistence:** SQLite via Prisma in dev (Postgres in production — one-line
+  provider change); `steps` (with base64 screenshots) stored as a JSON column.
+  Generated media (narration, video) goes through the pluggable storage adapter —
+  local disk by default, S3 in production.
 - **Auth:** email+password (scrypt), HMAC-signed session cookies, and per-user
   API tokens (sha256-hashed at rest, shown once). No external auth dependency.
 - **Annotations/zoom:** SVG overlay + `backdrop-filter` blur on screen; the PDF

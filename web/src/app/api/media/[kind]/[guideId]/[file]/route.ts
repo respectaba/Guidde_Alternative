@@ -1,13 +1,9 @@
 /**
- * GET /api/media/:kind/:guideId/:file — streams generated audio/video from the
- * writable .media dir. Path segments are validated to prevent traversal.
+ * GET /api/media/:kind/:guideId/:file — serves generated audio/video through the
+ * active storage adapter (local disk or S3). Path segments are validated to
+ * prevent traversal.
  */
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
-import { join } from "node:path";
-import type { ReadableStream as NodeReadableStream } from "node:stream/web";
-import { Readable } from "node:stream";
-import { mediaDir, type MediaKind } from "@/lib/media/store";
+import { readMedia, type MediaKind } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +11,9 @@ const SAFE = /^[A-Za-z0-9._-]+$/;
 const MIME: Record<string, string> = {
   wav: "audio/wav",
   mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  ogg: "audio/ogg",
   mp4: "video/mp4",
 };
 
@@ -27,21 +26,16 @@ export async function GET(_req: Request, { params }: Params) {
   if ((kind !== "audio" && kind !== "video") || !SAFE.test(guideId) || !SAFE.test(file)) {
     return new Response("Not found", { status: 404 });
   }
-  const path = join(mediaDir(kind as MediaKind, guideId), file);
-  let size: number;
-  try {
-    size = (await stat(path)).size;
-  } catch {
-    return new Response("Not found", { status: 404 });
-  }
+  const buf = await readMedia(kind as MediaKind, guideId, file);
+  if (!buf) return new Response("Not found", { status: 404 });
+
   const ext = file.split(".").pop()?.toLowerCase() ?? "";
-  const nodeStream = createReadStream(path);
-  const body = Readable.toWeb(nodeStream) as unknown as NodeReadableStream;
-  return new Response(body as unknown as BodyInit, {
+  const body = new Uint8Array(buf);
+  return new Response(body, {
     status: 200,
     headers: {
       "Content-Type": MIME[ext] ?? "application/octet-stream",
-      "Content-Length": String(size),
+      "Content-Length": String(buf.length),
       "Cache-Control": "no-store",
     },
   });

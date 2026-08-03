@@ -17,9 +17,12 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 export function EditorShell({
   initialGuide,
   brand,
+  canEdit = true,
 }: {
   initialGuide: Guide;
   brand?: BrandKit;
+  /** Viewers (workspace role "viewer") get a read-only playback view. */
+  canEdit?: boolean;
 }) {
   const [guide, setGuide] = useState<Guide>(initialGuide);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -39,6 +42,7 @@ export function EditorShell({
 
   // ---- Debounced autosave ----
   useEffect(() => {
+    if (!canEdit) return;
     if (firstRender.current) {
       firstRender.current = false;
       return;
@@ -66,7 +70,7 @@ export function EditorShell({
       }
     }, 800);
     return () => clearTimeout(t);
-  }, [guide]);
+  }, [guide, canEdit]);
 
   const updateStep = useCallback(
     (next: Step) => {
@@ -125,19 +129,39 @@ export function EditorShell({
 
   const exportVideo = async () => {
     setRendering(true);
-    setNarrateMsg("Rendering MP4 (frames + zoom + narration)… this can take a bit.");
+    setNarrateMsg("Queued MP4 render… this runs in the background.");
     try {
       const res = await fetch(`/api/guides/${guide.id}/video`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.videoUrl) {
-        setNarrateMsg(`Video ready (${Math.round((data.bytes ?? 0) / 1024)} KB).`);
-        window.open(data.videoUrl, "_blank");
-      } else {
-        setNarrateMsg(data.error ?? "Video export failed.");
+      if (!res.ok || !data.jobId) {
+        setNarrateMsg(data.error ?? "Couldn't start the render.");
+        setRendering(false);
+        return;
       }
+      const jobId = data.jobId as string;
+      const poll = async () => {
+        try {
+          const r = await fetch(`/api/jobs/${jobId}`);
+          const j = await r.json().catch(() => ({}));
+          if (j.status === "done" && j.videoUrl) {
+            setNarrateMsg("Video ready — opening in a new tab.");
+            window.open(j.videoUrl, "_blank");
+            setRendering(false);
+          } else if (j.status === "error") {
+            setNarrateMsg(j.error ?? "Video export failed.");
+            setRendering(false);
+          } else {
+            setNarrateMsg(`Rendering MP4 (frames + zoom + narration)… ${j.progress ?? 0}%`);
+            setTimeout(poll, 1500);
+          }
+        } catch {
+          setNarrateMsg("Lost contact with the render job.");
+          setRendering(false);
+        }
+      };
+      setTimeout(poll, 1200);
     } catch {
       setNarrateMsg("Network error during video export.");
-    } finally {
       setRendering(false);
     }
   };
@@ -192,6 +216,27 @@ export function EditorShell({
     setActiveIndex((idx) => Math.max(0, idx > i ? idx - 1 : Math.min(idx, guide.steps.length - 2)));
     setSelection(null);
   };
+
+  if (!canEdit) {
+    return (
+      <main className="editor">
+        <div className="editor-topbar">
+          <div className="row" style={{ flex: 1, minWidth: 0 }}>
+            <Link href="/" className="btn small ghost">
+              ← All guides
+            </Link>
+            <strong style={{ fontSize: 16 }}>{guide.title}</strong>
+          </div>
+          <span className="muted" style={{ fontSize: 13 }}>
+            👁 View-only · you have the viewer role in this workspace
+          </span>
+        </div>
+        <div style={{ maxWidth: 900, margin: "20px auto" }}>
+          <PlaybackPlayer guide={guide} brand={brand} />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="editor">

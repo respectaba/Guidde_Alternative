@@ -1,0 +1,51 @@
+# Production-style stack: Postgres database + the web app with S3 storage.
+#
+# Prisma pins the datasource provider in the schema, so before building with
+# Postgres, change ONE line in web/prisma/schema.prisma:
+#     datasource db { provider = "postgresql"  url = env("DATABASE_URL") }
+# then:  docker compose -f docker-compose.postgres.yml up --build
+#
+# Set S3_* / AWS_* to point at your bucket (AWS S3, Cloudflare R2, MinIO, …),
+# and run `npm i @aws-sdk/client-s3` (added to web/package.json) so the S3 driver
+# is available in the image.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: guideflow
+      POSTGRES_PASSWORD: guideflow
+      POSTGRES_DB: guideflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U guideflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://guideflow:guideflow@db:5432/guideflow?schema=public"
+      AUTH_SECRET: "change-me-to-a-long-random-string"
+      ENCRYPTION_KEY: "change-me-too-32-bytes-min"
+      NODE_ENV: "production"
+      # ---- object storage (S3-compatible) ----
+      STORAGE_DRIVER: "s3"
+      S3_BUCKET: "your-bucket"
+      S3_REGION: "us-east-1"
+      # S3_ENDPOINT: "https://<accountid>.r2.cloudflarestorage.com"  # for R2/MinIO
+      AWS_ACCESS_KEY_ID: "your-key"
+      AWS_SECRET_ACCESS_KEY: "your-secret"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

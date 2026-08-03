@@ -127,8 +127,10 @@ export interface Guide {
   publicSlug: string;
   isPublic: boolean;
   steps: Step[];
-  /** Owner user id (null for legacy/unowned guides). */
+  /** Creator user id (null for legacy/unowned guides). */
   userId?: string | null;
+  /** Owning workspace id (null for legacy guides not yet adopted). */
+  workspaceId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

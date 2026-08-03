@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { listGuides } from "@/lib/guides";
 import { getSessionUser } from "@/lib/auth";
+import { getActiveWorkspaceId, getRole } from "@/lib/workspace";
 import { DeleteGuideButton } from "@/components/DeleteGuideButton";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  const guides = await listGuides(user.id);
+  const workspaceId = await getActiveWorkspaceId(user.id, user.email);
+  const role = await getRole(user.id, workspaceId);
+  const canEdit = role === "owner" || role === "admin" || role === "editor";
+  const guides = await listGuides(workspaceId);
 
   return (
     <main>
@@ -20,9 +24,11 @@ export default async function DashboardPage() {
             Capture with the extension, or build a guide by importing a capture.
           </p>
         </div>
-        <Link href="/import" className="btn primary">
-          + New guide
-        </Link>
+        {canEdit && (
+          <Link href="/import" className="btn primary">
+            + New guide
+          </Link>
+        )}
       </div>
 
       {guides.length === 0 ? (
@@ -66,7 +72,7 @@ export default async function DashboardPage() {
               </div>
               <div className="actions">
                 <Link href={`/editor/${g.id}`} className="btn small">
-                  Edit
+                  {canEdit ? "Edit" : "Open"}
                 </Link>
                 {g.isPublic && (
                   <Link href={`/guide/${g.publicSlug}`} className="btn small ghost">
@@ -74,7 +80,7 @@ export default async function DashboardPage() {
                   </Link>
                 )}
                 <div className="spacer" />
-                <DeleteGuideButton id={g.id} />
+                {canEdit && <DeleteGuideButton id={g.id} />}
               </div>
             </div>
           ))}

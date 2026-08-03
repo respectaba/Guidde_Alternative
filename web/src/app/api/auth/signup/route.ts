@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
+import { ensurePersonalWorkspace } from "@/lib/workspace";
 import { error, json } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.create({
     data: { email, passwordHash: hashPassword(parsed.data.password) },
   });
+  await ensurePersonalWorkspace(user.id, user.email);
   setSessionCookie(user.id);
   return json({ ok: true, email: user.email }, { status: 201 });
 }

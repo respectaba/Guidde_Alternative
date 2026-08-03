@@ -13,14 +13,60 @@ datasource db {
 }
 
 model User {
-  id           String      @id @default(cuid())
-  email        String      @unique
+  id           String       @id @default(cuid())
+  email        String       @unique
   passwordHash String
-  createdAt    DateTime    @default(now())
+  createdAt    DateTime     @default(now())
   guides       Guide[]
   tokens       ApiToken[]
   ttsSetting   TtsSetting?
   brandKit     BrandKit?
+  memberships  Membership[]
+  sentInvites  Invite[]     @relation("InvitedBy")
+}
+
+// A team space that owns guides and has members. Every user gets a personal
+// workspace on signup; additional shared workspaces enable collaboration.
+model Workspace {
+  id          String       @id @default(cuid())
+  name        String
+  personal    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  invites     Invite[]
+  guides      Guide[]
+}
+
+// A user's role in a workspace. Roles are ordered viewer < editor < admin < owner
+// (see lib/workspace.ts). A user has exactly one membership per workspace.
+model Membership {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String    @default("editor")
+  createdAt   DateTime  @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+// A pending invitation to join a workspace, redeemable via a one-time token.
+model Invite {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email       String
+  role        String    @default("editor")
+  token       String    @unique
+  invitedById String
+  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  acceptedAt  DateTime?
+
+  @@index([workspaceId])
+  @@index([email])
 }
 
 // Per-tenant branding applied to guide cover slides and exports.
@@ -77,12 +123,36 @@ model Guide {
   steps      String
   userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // The owning workspace. Nullable for legacy rows; lazily backfilled to the
+  // creator's personal workspace on first access (see lib/workspace.ts).
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   events     GuideEvent[]
+  jobs       Job[]
 
   @@index([updatedAt])
   @@index([userId])
+  @@index([workspaceId])
+}
+
+// Background job for slow work (currently MP4 rendering) so requests don't block.
+// A DB-backed queue drained by an in-process worker (see lib/jobs/*).
+model Job {
+  id        String   @id @default(cuid())
+  guideId   String
+  guide     Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  type      String // "video"
+  status    String   @default("queued") // queued | running | done | error
+  progress  Int      @default(0) // 0..100
+  result    String? // e.g. media URL when done
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([guideId])
 }
 
 // Lightweight viewer analytics for shared guides.

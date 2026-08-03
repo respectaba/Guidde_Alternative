@@ -1,0 +1,29 @@
+# Runs Guideflow with the built-in SQLite database — works out of the box.
+#   docker compose up --build
+# Data (SQLite file + generated media) persists in named volumes.
+#
+# For Postgres + S3 in production, see docker-compose.postgres.yml and the
+# "Deployment" section of the README.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # SQLite lives on the db volume mounted at /data.
+      DATABASE_URL: "file:/data/prod.db"
+      # CHANGE THESE in any real deployment.
+      AUTH_SECRET: "change-me-to-a-long-random-string"
+      ENCRYPTION_KEY: "change-me-too-32-bytes-min"
+      STORAGE_DRIVER: "local"
+      NODE_ENV: "production"
+    volumes:
+      - db:/data
+      - media:/app/web/.media
+    restart: unless-stopped
+
+volumes:
+  db:
+  media:

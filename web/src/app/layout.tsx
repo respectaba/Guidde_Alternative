@@ -3,7 +3,9 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import "./globals.css";
 import { getSessionUser } from "@/lib/auth";
+import { getActiveWorkspaceId, listWorkspaces } from "@/lib/workspace";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { WorkspaceSwitcher } from "@/components/workspace/WorkspaceSwitcher";
 
 export const metadata: Metadata = {
   title: "Guideflow — Step-by-step guide creator",
@@ -27,6 +29,14 @@ export default async function RootLayout({
   }
 
   const user = await getSessionUser();
+  let workspaces: Awaited<ReturnType<typeof listWorkspaces>> = [];
+  let activeWorkspaceId = "";
+  if (user) {
+    [workspaces, activeWorkspaceId] = await Promise.all([
+      listWorkspaces(user.id),
+      getActiveWorkspaceId(user.id, user.email),
+    ]);
+  }
 
   return (
     <html lang="en">
@@ -40,8 +50,12 @@ export default async function RootLayout({
             <div className="row">
               {user ? (
                 <>
+                  <WorkspaceSwitcher
+                    initialWorkspaces={workspaces}
+                    initialActiveId={activeWorkspaceId}
+                  />
                   <Link href="/settings" className="btn ghost small">
-                    API tokens
+                    Settings
                   </Link>
                   <span className="muted" style={{ fontSize: 13 }}>
                     {user.email}

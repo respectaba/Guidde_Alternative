@@ -5,7 +5,7 @@
  * concatenate all step segments with ffmpeg. Returns the final MP4 bytes.
  */
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile, access } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -14,9 +14,8 @@ import { createCanvas, loadImage } from "@napi-rs/canvas";
 import type { BrandKit, Guide, Step } from "@guide/shared";
 import { clamp01 } from "@guide/shared";
 import { drawCover, drawOutro, drawFrame } from "./frame";
-import { mediaDir } from "@/lib/media/store";
+import { mediaLocalPath, saveMedia } from "@/lib/storage";
 import { serverTtsAvailable, synthesize, type TtsConfig } from "@/lib/ai/tts";
-import { saveMedia } from "@/lib/media/store";
 
 const execFileP = promisify(execFile);
 const FFMPEG = (ffmpegPath as unknown as string) || "ffmpeg";
@@ -68,20 +67,14 @@ async function resolveAudio(
   if (step.audioUrl) {
     const file = step.audioUrl.split("?")[0].split("/").pop();
     if (file) {
-      const p = join(mediaDir("audio", guide.id), file);
-      try {
-        await access(p);
-        return p;
-      } catch {
-        /* fall through */
-      }
+      const p = await mediaLocalPath("audio", guide.id, file);
+      if (p) return p;
     }
   }
   if (serverTtsAvailable(tts)) {
     const { audio, ext } = await synthesize(step.caption, tts);
-    const url = await saveMedia("audio", guide.id, `${step.id}.${ext}`, audio);
-    const file = url.split("/").pop()!;
-    return join(mediaDir("audio", guide.id), file);
+    await saveMedia("audio", guide.id, `${step.id}.${ext}`, audio);
+    return mediaLocalPath("audio", guide.id, `${step.id}.${ext}`);
   }
   return null;
 }
@@ -213,13 +206,7 @@ async function resolveMusic(guide: Guide): Promise<string | null> {
   if (!guide.musicUrl) return null;
   const file = guide.musicUrl.split("?")[0].split("/").pop();
   if (!file) return null;
-  const p = join(mediaDir("audio", guide.id), file);
-  try {
-    await access(p);
-    return p;
-  } catch {
-    return null;
-  }
+  return mediaLocalPath("audio", guide.id, file);
 }
 
 /** Render the branded outro (held image + optional "thanks" narration). */

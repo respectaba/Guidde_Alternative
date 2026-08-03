@@ -1,0 +1,11 @@
+**/node_modules
+**/.next
+**/dist
+**/.media
+**/*.db
+**/*.db-journal
+.git
+.env
+**/.env
+**/.env.local
+npm-debug.log*

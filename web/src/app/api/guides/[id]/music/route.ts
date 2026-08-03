@@ -7,7 +7,8 @@
 import type { NextRequest } from "next/server";
 import { getGuide, updateGuide } from "@/lib/guides";
 import { authenticateRequest } from "@/lib/auth";
-import { saveMedia } from "@/lib/media/store";
+import { canAccessGuide } from "@/lib/workspace";
+import { saveMedia } from "@/lib/storage";
 import { error, json, preflight } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ async function owned(req: NextRequest, id: string) {
   if (!user) return { err: error("Not authenticated", 401) };
   const guide = await getGuide(id);
   if (!guide) return { err: error("Guide not found", 404) };
-  if (guide.userId !== user.id) return { err: error("Forbidden", 403) };
+  if (!(await canAccessGuide(user.id, guide, "editor"))) return { err: error("Forbidden", 403) };
   return { user, guide };
 }
 

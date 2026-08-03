@@ -21,6 +21,7 @@ interface GuideRow {
   isPublic: boolean;
   steps: string;
   userId: string | null;
+  workspaceId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +46,7 @@ function rowToGuide(row: GuideRow): Guide {
     isPublic: row.isPublic,
     steps,
     userId: row.userId,
+    workspaceId: row.workspaceId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -62,9 +64,10 @@ export interface GuideSummary {
   updatedAt: string;
 }
 
-export async function listGuides(userId: string): Promise<GuideSummary[]> {
+/** List the guides that belong to a workspace (dashboard). */
+export async function listGuides(workspaceId: string): Promise<GuideSummary[]> {
   const rows = await prisma.guide.findMany({
-    where: { userId },
+    where: { workspaceId },
     orderBy: { updatedAt: "desc" },
   });
   const views = await viewCounts(rows.map((r) => r.id));
@@ -96,6 +99,7 @@ export async function getGuideBySlug(slug: string): Promise<Guide | null> {
 export async function createGuide(
   input: CreateGuideInput,
   userId: string,
+  workspaceId: string,
 ): Promise<Guide> {
   const row = await prisma.guide.create({
     data: {
@@ -104,6 +108,7 @@ export async function createGuide(
       isPublic: false,
       steps: JSON.stringify(normalizeStepOrder(input.steps)),
       userId,
+      workspaceId,
     },
   });
   return rowToGuide(row as GuideRow);

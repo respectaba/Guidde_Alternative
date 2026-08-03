@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
 import { createGuideSchema } from "@guide/shared";
 import { createGuide, listGuides } from "@/lib/guides";
 import { authenticateRequest } from "@/lib/auth";
+import { getActiveWorkspaceId } from "@/lib/workspace";
 import { error, json, preflight } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ export async function OPTIONS() {
 export async function GET(req: NextRequest) {
   const user = await authenticateRequest(req);
   if (!user) return error("Not authenticated", 401);
-  const guides = await listGuides(user.id);
+  const workspaceId = await getActiveWorkspaceId(user.id, user.email);
+  const guides = await listGuides(workspaceId);
   return json({ guides });
 }
 
@@ -40,6 +42,7 @@ export async function POST(req: NextRequest) {
     return error("Validation failed", 422, parsed.error.flatten());
   }
 
-  const guide = await createGuide(parsed.data, user.id);
+  const workspaceId = await getActiveWorkspaceId(user.id, user.email);
+  const guide = await createGuide(parsed.data, user.id, workspaceId);
   return json({ id: guide.id, publicSlug: guide.publicSlug, guide }, { status: 201 });
 }

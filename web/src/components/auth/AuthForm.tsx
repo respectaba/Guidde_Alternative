@@ -1,10 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const safeNext = next && next.startsWith("/") ? next : "/";
+  const otherHref = (m: "login" | "signup") =>
+    next ? `/${m}?next=${encodeURIComponent(safeNext)}` : `/${m}`;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,7 +29,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        router.push("/");
+        router.push(safeNext);
         router.refresh();
       } else {
         setErr(data.error ?? "Something went wrong.");
@@ -73,9 +78,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </form>
       <p className="muted" style={{ fontSize: 14, marginTop: 14 }}>
         {isSignup ? (
-          <>Already have an account? <Link href="/login" style={{ color: "var(--accent)" }}>Log in</Link></>
+          <>Already have an account? <Link href={otherHref("login")} style={{ color: "var(--accent)" }}>Log in</Link></>
         ) : (
-          <>New here? <Link href="/signup" style={{ color: "var(--accent)" }}>Create an account</Link></>
+          <>New here? <Link href={otherHref("signup")} style={{ color: "var(--accent)" }}>Create an account</Link></>
         )}
       </p>
     </main>

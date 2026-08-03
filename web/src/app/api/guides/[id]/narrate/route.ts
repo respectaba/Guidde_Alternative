@@ -7,8 +7,9 @@
 import type { NextRequest } from "next/server";
 import { getGuide, updateGuide } from "@/lib/guides";
 import { resolveTtsConfig, serverTtsAvailable, synthesize } from "@/lib/ai/tts";
-import { saveMedia } from "@/lib/media/store";
+import { saveMedia } from "@/lib/storage";
 import { authenticateRequest } from "@/lib/auth";
+import { canAccessGuide } from "@/lib/workspace";
 import { error, json, preflight } from "@/lib/http";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const guide = await getGuide(params.id);
   if (!guide) return error("Guide not found", 404);
-  if (guide.userId !== user.id) return error("Forbidden", 403);
+  if (!(await canAccessGuide(user.id, guide, "editor"))) return error("Forbidden", 403);
 
   const config = await resolveTtsConfig(user.id);
   if (!serverTtsAvailable(config)) {
