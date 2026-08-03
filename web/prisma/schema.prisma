@@ -67,6 +67,10 @@ model Guide {
   title      String
   subtitle   String?
   showCover  Boolean  @default(true)
+  showOutro  Boolean  @default(true)
+  ctaText    String?
+  ctaUrl     String?
+  musicUrl   String?
   publicSlug String   @unique
   isPublic   Boolean  @default(false)
   // JSON-serialized Step[] (screenshots, click points, annotations, blur regions)

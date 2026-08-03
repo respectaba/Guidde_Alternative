@@ -147,6 +147,66 @@ export function drawCover(
   ctx.textBaseline = "alphabetic";
 }
 
+/** Draw a branded outro frame (thank-you headline + optional CTA pill). */
+export function drawOutro(
+  ctx: SKRSContext2D,
+  opts: { W: number; H: number; accent: string; brandName?: string | null; logo?: Image | null; ctaText?: string | null },
+) {
+  const { W, H, accent, brandName, logo, ctaText } = opts;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, shadeHex(accent, -18));
+  grad.addColorStop(1, shadeHex(accent, -40));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (logo) {
+    const maxH = H * 0.16;
+    const ar = logo.width / logo.height;
+    const h = Math.min(maxH, logo.height);
+    const w = h * ar;
+    ctx.drawImage(logo, (W - w) / 2, H * 0.2, w, h);
+  } else if (brandName) {
+    ctx.font = `600 ${Math.round(H * 0.04)}px sans-serif`;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(brandName, W / 2, H * 0.26);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.font = `700 ${Math.round(H * 0.07)}px sans-serif`;
+  ctx.fillText("Thanks for watching", W / 2, H * 0.48);
+
+  if (ctaText && ctaText.trim()) {
+    const label = ctaText.trim();
+    ctx.font = `800 ${Math.round(H * 0.038)}px sans-serif`;
+    const tw = ctx.measureText(label).width;
+    const padX = H * 0.05;
+    const padY = H * 0.03;
+    const bw = tw + padX * 2;
+    const bh = H * 0.038 + padY * 2;
+    const bx = (W - bw) / 2;
+    const by = H * 0.6;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, bx, by, bw, bh, bh / 2);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.fillText(label, W / 2, by + bh / 2);
+  }
+
+  ctx.font = `400 ${Math.round(H * 0.022)}px sans-serif`;
+  ctx.fillStyle = "#ffffff";
+  ctx.globalAlpha = 0.8;
+  ctx.fillText(`${brandName ? brandName + " · " : ""}Made with Guideflow`, W / 2, H * 0.92);
+  ctx.globalAlpha = 1;
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
 export interface FrameOpts {
   W: number;
   H: number;

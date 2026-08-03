@@ -120,6 +120,43 @@ export async function exportGuideToPdf(guide: Guide, brand?: BrandKit): Promise<
     doc.addImage(imgData, "JPEG", x, y, w, h);
   }
 
+  // ---- Branded outro / CTA ----
+  if (guide.showOutro !== false) {
+    doc.addPage();
+    const [or_, og_, ob_] = hexToRgb(accent);
+    doc.setFillColor(Math.round(or_ * 0.8), Math.round(og_ * 0.8), Math.round(ob_ * 0.8));
+    doc.rect(0, 0, pageW, pageH, "F");
+
+    doc.setTextColor(255, 255, 255);
+    if (brand?.logo) {
+      try {
+        const img = await loadImage(brand.logo);
+        const h = Math.min(60, img.height);
+        const w = h * (img.width / img.height);
+        doc.addImage(brand.logo, "PNG", (pageW - w) / 2, pageH / 2 - 90, w, h);
+      } catch {
+        /* ignore */
+      }
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(30);
+    doc.text("Thanks for watching", pageW / 2, pageH / 2, { align: "center" });
+    if (guide.ctaText) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      const label = guide.ctaUrl ? `${guide.ctaText}  →  ${guide.ctaUrl}` : guide.ctaText;
+      doc.text(label, pageW / 2, pageH / 2 + 34, { align: "center" });
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(
+      `${brand?.name ? brand.name + " · " : ""}Made with Guideflow`,
+      pageW / 2,
+      pageH - margin,
+      { align: "center" },
+    );
+  }
+
   const safeName =
     guide.title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() ||
     "guide";

@@ -115,6 +115,14 @@ export interface Guide {
   subtitle?: string | null;
   /** Whether to show the cover slide in playback/exports. */
   showCover?: boolean;
+  /** Whether to show the outro/CTA slide in playback/exports. */
+  showOutro?: boolean;
+  /** Call-to-action button label on the outro. */
+  ctaText?: string | null;
+  /** Call-to-action link. */
+  ctaUrl?: string | null;
+  /** Background music track URL (served from /api/media). */
+  musicUrl?: string | null;
   /** Opaque slug used in the public share URL (/guide/[slug]). */
   publicSlug: string;
   isPublic: boolean;
@@ -139,6 +147,10 @@ export interface UpdateGuideInput {
   title?: string;
   subtitle?: string | null;
   showCover?: boolean;
+  showOutro?: boolean;
+  ctaText?: string | null;
+  ctaUrl?: string | null;
+  musicUrl?: string | null;
   isPublic?: boolean;
   steps?: Step[];
 }

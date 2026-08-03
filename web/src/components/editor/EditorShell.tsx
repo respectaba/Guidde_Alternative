@@ -31,6 +31,8 @@ export function EditorShell({
   const [narrating, setNarrating] = useState(false);
   const [narrateMsg, setNarrateMsg] = useState<string | null>(null);
   const [rendering, setRendering] = useState(false);
+  const [musicBusy, setMusicBusy] = useState(false);
+  const musicInputRef = useRef<HTMLInputElement | null>(null);
 
   const firstRender = useRef(true);
   const step = guide.steps[activeIndex];
@@ -51,6 +53,9 @@ export function EditorShell({
             title: guide.title,
             subtitle: guide.subtitle ?? null,
             showCover: guide.showCover !== false,
+            showOutro: guide.showOutro !== false,
+            ctaText: guide.ctaText ?? null,
+            ctaUrl: guide.ctaUrl ?? null,
             isPublic: guide.isPublic,
             steps: guide.steps,
           }),
@@ -134,6 +139,40 @@ export function EditorShell({
       setNarrateMsg("Network error during video export.");
     } finally {
       setRendering(false);
+    }
+  };
+
+  const uploadMusic = async (file: File) => {
+    setMusicBusy(true);
+    setNarrateMsg(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/guides/${guide.id}/music`, { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.musicUrl) {
+        setGuide((g) => ({ ...g, musicUrl: data.musicUrl as string }));
+        setNarrateMsg("Background music added. It loops under playback and the exported video.");
+      } else {
+        setNarrateMsg(data.error ?? "Music upload failed.");
+      }
+    } catch {
+      setNarrateMsg("Network error uploading music.");
+    } finally {
+      setMusicBusy(false);
+      if (musicInputRef.current) musicInputRef.current.value = "";
+    }
+  };
+
+  const removeMusic = async () => {
+    setMusicBusy(true);
+    try {
+      const res = await fetch(`/api/guides/${guide.id}/music`, { method: "DELETE" });
+      if (res.ok) setGuide((g) => ({ ...g, musicUrl: null }));
+    } catch {
+      /* ignore */
+    } finally {
+      setMusicBusy(false);
     }
   };
 
@@ -290,6 +329,93 @@ export function EditorShell({
                 .
               </p>
             </div>
+
+            <div className="caption-editor">
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <label className="muted" style={{ fontSize: 13, fontWeight: 600 }}>
+                  Outro &amp; call to action
+                </label>
+                <label className="row" style={{ gap: 6, fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={guide.showOutro !== false}
+                    onChange={(e) => setGuide((g) => ({ ...g, showOutro: e.target.checked }))}
+                  />
+                  Show
+                </label>
+              </div>
+              <input
+                value={guide.ctaText ?? ""}
+                onChange={(e) => setGuide((g) => ({ ...g, ctaText: e.target.value }))}
+                placeholder="Button text (e.g. Get started)"
+                maxLength={60}
+                style={{
+                  width: "100%",
+                  background: "var(--bg-panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 14,
+                }}
+              />
+              <input
+                value={guide.ctaUrl ?? ""}
+                onChange={(e) => setGuide((g) => ({ ...g, ctaUrl: e.target.value }))}
+                placeholder="Link URL (e.g. yoursite.com/signup)"
+                style={{
+                  width: "100%",
+                  background: "var(--bg-panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 14,
+                }}
+              />
+            </div>
+
+            <div className="caption-editor">
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <label className="muted" style={{ fontSize: 13, fontWeight: 600 }}>
+                  Background music
+                </label>
+                {guide.musicUrl && (
+                  <button
+                    className="btn small ghost"
+                    onClick={removeMusic}
+                    disabled={musicBusy}
+                    title="Remove background music"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <input
+                ref={musicInputRef}
+                type="file"
+                accept="audio/mpeg,audio/mp3,audio/wav,audio/mp4,audio/m4a,audio/aac,audio/ogg"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadMusic(f);
+                }}
+                style={{ display: "none" }}
+              />
+              <button
+                className="btn small"
+                onClick={() => musicInputRef.current?.click()}
+                disabled={musicBusy}
+                style={{ width: "100%" }}
+              >
+                {musicBusy ? "Uploading…" : guide.musicUrl ? "♪ Replace track" : "♪ Upload track"}
+              </button>
+              <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                {guide.musicUrl
+                  ? "Loops quietly under narration in playback and export."
+                  : "Optional. MP3/WAV/M4A/OGG up to 20MB."}
+              </p>
+            </div>
+
             <AnnotationToolbar
               tool={tool}
               setTool={setTool}

@@ -13,6 +13,10 @@ interface GuideRow {
   title: string;
   subtitle: string | null;
   showCover: boolean;
+  showOutro: boolean;
+  ctaText: string | null;
+  ctaUrl: string | null;
+  musicUrl: string | null;
   publicSlug: string;
   isPublic: boolean;
   steps: string;
@@ -33,6 +37,10 @@ function rowToGuide(row: GuideRow): Guide {
     title: row.title,
     subtitle: row.subtitle,
     showCover: row.showCover,
+    showOutro: row.showOutro,
+    ctaText: row.ctaText,
+    ctaUrl: row.ctaUrl,
+    musicUrl: row.musicUrl,
     publicSlug: row.publicSlug,
     isPublic: row.isPublic,
     steps,
@@ -112,6 +120,10 @@ export async function updateGuide(
   if (input.title !== undefined) data.title = input.title;
   if (input.subtitle !== undefined) data.subtitle = input.subtitle;
   if (input.showCover !== undefined) data.showCover = input.showCover;
+  if (input.showOutro !== undefined) data.showOutro = input.showOutro;
+  if (input.ctaText !== undefined) data.ctaText = input.ctaText;
+  if (input.ctaUrl !== undefined) data.ctaUrl = input.ctaUrl;
+  if (input.musicUrl !== undefined) data.musicUrl = input.musicUrl;
   if (input.isPublic !== undefined) data.isPublic = input.isPublic;
   if (input.steps !== undefined) {
     data.steps = JSON.stringify(normalizeStepOrder(input.steps));

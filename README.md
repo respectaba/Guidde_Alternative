@@ -153,6 +153,16 @@ node scripts/tts-smoke.mjs demo@example.com password123
   and the opening segment in the **MP4** (with the title narrated when server TTS
   is available). Per-guide **subtitle** and a **show/hide cover** toggle live in
   the editor's Cover panel; brand assets come from the brand kit.
+- **Outro / call-to-action**: an optional closing slide (logo, "Thanks for
+  watching", a CTA button, accent gradient) renders as the last slide in
+  **playback**, the final page in **PDF**, and the closing segment in the
+  **MP4**. Per-guide **CTA button text**, **link URL**, and a **show/hide**
+  toggle live in the editor's Outro panel; the button links out (in the public
+  player and embeds) to the URL you provide.
+- **Background music**: upload a track (MP3/WAV/M4A/OGG, ≤20MB) in the editor's
+  Music panel (`POST /api/guides/:id/music`). It loops quietly under narration
+  in **playback** and is mixed under the narration in the exported **MP4**
+  (`ffmpeg` `amix` at low volume, ducked below the voice).
 
 ## Sharing, embedding & analytics
 
@@ -172,11 +182,13 @@ The editor **🎬 Export MP4** button renders the guide to an MP4:
 click ripple) with an eased Ken-Burns zoom toward the click point, `ffmpeg`
 muxes each with its narration (or synthesizes/silence) and concatenates to a
 `+faststart` H.264/AAC file. `POST /api/guides/:id/video` → `{ videoUrl }`.
+Branded cover and outro segments bookend the steps, and any uploaded
+background-music track is looped and mixed in under the narration.
 
 ## Tests
 
 ```bash
-npm test        # shared unit tests + web data-layer & auth tests (31 total)
+npm test        # shared unit tests + web data-layer & auth tests (51 total)
 ```
 
 - `packages/shared` — caption heuristic, geometry math, zod schema round-trips.

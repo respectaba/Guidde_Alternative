@@ -84,6 +84,10 @@ export const updateGuideSchema = z
     title: z.string().min(1).max(200).optional(),
     subtitle: z.string().max(300).nullable().optional(),
     showCover: z.boolean().optional(),
+    showOutro: z.boolean().optional(),
+    ctaText: z.string().max(60).nullable().optional(),
+    ctaUrl: z.string().max(500).nullable().optional(),
+    musicUrl: z.string().max(500).nullable().optional(),
     isPublic: z.boolean().optional(),
     steps: z.array(stepSchema).optional(),
   })

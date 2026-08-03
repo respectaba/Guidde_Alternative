@@ -13,7 +13,7 @@ import ffmpegPath from "ffmpeg-static";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import type { BrandKit, Guide, Step } from "@guide/shared";
 import { clamp01 } from "@guide/shared";
-import { drawCover, drawFrame } from "./frame";
+import { drawCover, drawOutro, drawFrame } from "./frame";
 import { mediaDir } from "@/lib/media/store";
 import { serverTtsAvailable, synthesize, type TtsConfig } from "@/lib/ai/tts";
 import { saveMedia } from "@/lib/media/store";
@@ -208,6 +208,74 @@ async function renderCoverSegment(
   return seg;
 }
 
+/** Resolve the guide's background-music file on disk, if any. */
+async function resolveMusic(guide: Guide): Promise<string | null> {
+  if (!guide.musicUrl) return null;
+  const file = guide.musicUrl.split("?")[0].split("/").pop();
+  if (!file) return null;
+  const p = join(mediaDir("audio", guide.id), file);
+  try {
+    await access(p);
+    return p;
+  } catch {
+    return null;
+  }
+}
+
+/** Render the branded outro (held image + optional "thanks" narration). */
+async function renderOutroSegment(
+  guide: Guide,
+  brand: BrandKit,
+  workDir: string,
+  tts: TtsConfig,
+): Promise<string> {
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext("2d");
+  let logo = null;
+  if (brand.logo) {
+    try {
+      logo = await loadImage(dataUrlToBuffer(brand.logo));
+    } catch {
+      /* ignore */
+    }
+  }
+  drawOutro(ctx, {
+    W,
+    H,
+    accent: brand.accentColor || "#6366f1",
+    brandName: brand.name,
+    logo,
+    ctaText: guide.ctaText,
+  });
+  const png = join(workDir, "outro.png");
+  await writeFile(png, canvas.toBuffer("image/png"));
+
+  let audioPath: string | null = null;
+  if (serverTtsAvailable(tts)) {
+    try {
+      const { audio, ext } = await synthesize("Thanks for watching", tts);
+      audioPath = join(workDir, `outro.${ext}`);
+      await writeFile(audioPath, audio);
+    } catch {
+      audioPath = null;
+    }
+  }
+  const duration = (audioPath ? await probeDuration(audioPath) : null) ?? 3;
+
+  const seg = join(workDir, "seg-outro.mp4");
+  const args = ["-y", "-loop", "1", "-i", png];
+  if (audioPath) args.push("-i", audioPath);
+  else args.push("-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo");
+  args.push(
+    "-t", duration.toFixed(3),
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(FPS),
+    "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
+    "-shortest", seg,
+  );
+  await ffmpeg(args);
+  return seg;
+}
+
 export async function exportGuideToVideo(
   guide: Guide,
   tts: TtsConfig,
@@ -223,18 +291,37 @@ export async function exportGuideToVideo(
     for (let i = 0; i < guide.steps.length; i++) {
       segs.push(await renderStepSegment(guide, guide.steps[i], workDir, i, tts));
     }
+    if (guide.showOutro !== false) {
+      segs.push(await renderOutroSegment(guide, brand, workDir, tts));
+    }
     const listPath = join(workDir, "list.txt");
     await writeFile(listPath, segs.map((s) => `file '${s}'`).join("\n"), "utf8");
 
+    const musicPath = await resolveMusic(guide);
     const out = join(workDir, "out.mp4");
-    // Re-encode on concat so mismatched segment params can't corrupt the join.
-    await ffmpeg([
-      "-y", "-f", "concat", "-safe", "0", "-i", listPath,
-      "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(FPS),
-      "-c:a", "aac", "-ar", "44100", "-ac", "2",
-      "-movflags", "+faststart",
-      out,
-    ]);
+    if (musicPath) {
+      // Mix looped background music under the narration (kept prominent).
+      await ffmpeg([
+        "-y", "-f", "concat", "-safe", "0", "-i", listPath,
+        "-stream_loop", "-1", "-i", musicPath,
+        "-filter_complex",
+        "[1:a]volume=0.12[m];[0:a][m]amix=inputs=2:duration=first:normalize=0[a]",
+        "-map", "0:v", "-map", "[a]",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(FPS),
+        "-c:a", "aac", "-ar", "44100", "-ac", "2",
+        "-movflags", "+faststart",
+        out,
+      ]);
+    } else {
+      // Re-encode on concat so mismatched segment params can't corrupt the join.
+      await ffmpeg([
+        "-y", "-f", "concat", "-safe", "0", "-i", listPath,
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(FPS),
+        "-c:a", "aac", "-ar", "44100", "-ac", "2",
+        "-movflags", "+faststart",
+        out,
+      ]);
+    }
     return await readFile(out);
   } finally {
     await rm(workDir, { recursive: true, force: true });

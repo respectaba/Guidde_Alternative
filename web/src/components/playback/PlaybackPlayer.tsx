@@ -3,11 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BrandKit, Guide, Step } from "@guide/shared";
 import { StepFrame } from "../frame/StepFrame";
 import { CoverSlide } from "./CoverSlide";
+import { OutroSlide } from "./OutroSlide";
 import { speak, cancelSpeech, type SpeakHandle } from "@/lib/ai/clientTts";
 import { DEFAULT_ACCENT } from "@/lib/brandConstants";
 import "./playback.css";
 
-type Slide = { kind: "cover" } | { kind: "step"; step: Step; stepNo: number };
+type Slide =
+  | { kind: "cover" }
+  | { kind: "step"; step: Step; stepNo: number }
+  | { kind: "outro" };
 
 const DEFAULT_BRAND: BrandKit = { name: null, logo: null, accentColor: DEFAULT_ACCENT };
 
@@ -30,13 +34,15 @@ export function PlaybackPlayer({
 }) {
   const kit = brand ?? DEFAULT_BRAND;
   const hasCover = guide.showCover !== false;
+  const hasOutro = guide.showOutro !== false;
 
   const slides = useMemo<Slide[]>(() => {
     const list: Slide[] = [];
     if (hasCover) list.push({ kind: "cover" });
     guide.steps.forEach((step, i) => list.push({ kind: "step", step, stepNo: i }));
+    if (hasOutro) list.push({ kind: "outro" });
     return list;
-  }, [guide.steps, hasCover]);
+  }, [guide.steps, hasCover, hasOutro]);
 
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -88,6 +94,31 @@ export function PlaybackPlayer({
     }
   }, [trackId, beacon]);
 
+  // ---- background music (looped, low volume, follows play/pause) ----
+  const musicRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    const url = guide.musicUrl;
+    if (playing && url) {
+      let a = musicRef.current;
+      if (!a) {
+        a = new Audio(url);
+        a.loop = true;
+        a.volume = 0.12;
+        musicRef.current = a;
+      }
+      void a.play().catch(() => {});
+    } else {
+      musicRef.current?.pause();
+    }
+  }, [playing, guide.musicUrl]);
+  useEffect(
+    () => () => {
+      musicRef.current?.pause();
+      musicRef.current = null;
+    },
+    [],
+  );
+
   // Narrate + auto-advance whenever we are playing on a given slide.
   useEffect(() => {
     if (!playing || !current) return;
@@ -111,7 +142,9 @@ export function PlaybackPlayer({
     const narration =
       current.kind === "cover"
         ? [guide.title, guide.subtitle].filter(Boolean).join(". ")
-        : current.step.caption;
+        : current.kind === "outro"
+          ? "Thanks for watching"
+          : current.step.caption;
     const audioUrl = current.kind === "step" ? current.step.audioUrl : undefined;
     const dwellMs = Math.max(2800, narration.split(/\s+/).length * 320);
 
@@ -158,15 +191,25 @@ export function PlaybackPlayer({
   }
 
   const label =
-    current.kind === "cover" ? "Cover" : `${current.stepNo + 1} / ${guide.steps.length}`;
+    current.kind === "cover"
+      ? "Cover"
+      : current.kind === "outro"
+        ? "Outro"
+        : `${current.stepNo + 1} / ${guide.steps.length}`;
   const caption =
-    current.kind === "cover" ? guide.title : current.step.caption;
+    current.kind === "cover"
+      ? guide.title
+      : current.kind === "outro"
+        ? "Thanks for watching"
+        : current.step.caption;
 
   return (
     <div className="player">
       <div className="player-stage">
         {current.kind === "cover" ? (
           <CoverSlide title={guide.title} subtitle={guide.subtitle} brand={kit} />
+        ) : current.kind === "outro" ? (
+          <OutroSlide brand={kit} ctaText={guide.ctaText} ctaUrl={guide.ctaUrl} />
         ) : (
           <StepFrame
             key={`${current.step.id}-${playing ? "play" : "pause"}`}
@@ -218,11 +261,11 @@ export function PlaybackPlayer({
       <div className="player-scrubber">
         {slides.map((s, i) => (
           <button
-            key={s.kind === "cover" ? "cover" : s.step.id}
+            key={s.kind === "step" ? s.step.id : s.kind}
             className={`seg ${i === index ? "active" : ""} ${i < index ? "done" : ""}`}
             onClick={() => goTo(i)}
-            aria-label={s.kind === "cover" ? "Cover" : `Go to step ${s.stepNo + 1}`}
-            title={s.kind === "cover" ? "Cover" : s.step.caption}
+            aria-label={s.kind === "step" ? `Go to step ${s.stepNo + 1}` : s.kind}
+            title={s.kind === "step" ? s.step.caption : s.kind}
           />
         ))}
       </div>
