@@ -1,0 +1,1 @@
+# keep this folder in git (Next serves static assets from here; the Docker build copies it)
