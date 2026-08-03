@@ -75,7 +75,20 @@ model Guide {
   user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  events     GuideEvent[]
 
   @@index([updatedAt])
   @@index([userId])
+}
+
+// Lightweight viewer analytics for shared guides.
+model GuideEvent {
+  id        String   @id @default(cuid())
+  guideId   String
+  guide     Guide    @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  type      String // "view" | "complete"
+  source    String // "public" | "embed"
+  createdAt DateTime @default(now())
+
+  @@index([guideId, createdAt])
 }

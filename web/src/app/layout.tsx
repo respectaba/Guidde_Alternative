@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import "./globals.css";
 import { getSessionUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -15,6 +16,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Chromeless for /embed so the player sits flush inside an iframe.
+  const chromeless = (headers().get("x-pathname") ?? "").startsWith("/embed");
+  if (chromeless) {
+    return (
+      <html lang="en">
+        <body style={{ background: "transparent" }}>{children}</body>
+      </html>
+    );
+  }
+
   const user = await getSessionUser();
 
   return (

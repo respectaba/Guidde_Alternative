@@ -6,6 +6,7 @@ import { StepList } from "./StepList";
 import { StepCanvas, type Selection, type Tool } from "./StepCanvas";
 import { AnnotationToolbar } from "./AnnotationToolbar";
 import { CaptionEditor } from "./CaptionEditor";
+import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ShareDialog } from "../ShareDialog";
 import { ExportButton } from "../export/ExportButton";
 import { PlaybackPlayer } from "../playback/PlaybackPlayer";
@@ -304,6 +305,7 @@ export function EditorShell({
                 onChange={(caption) => updateStep({ ...step, caption })}
               />
             )}
+            <AnalyticsPanel guideId={guide.id} />
           </aside>
         </div>
       )}

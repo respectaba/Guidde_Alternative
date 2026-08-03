@@ -36,7 +36,7 @@ export default async function PublicGuidePage({
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <PlaybackPlayer guide={guide} brand={brand} />
+        <PlaybackPlayer guide={guide} brand={brand} trackId={guide.id} source="public" />
       </div>
     </main>
   );

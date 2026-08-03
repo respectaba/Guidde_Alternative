@@ -16,7 +16,18 @@ const DEFAULT_BRAND: BrandKit = { name: null, logo: null, accentColor: DEFAULT_A
  * step's annotated screenshot with click ping, zoom, and TTS narration,
  * auto-advancing when narration ends. Read-only (editor preview + public view).
  */
-export function PlaybackPlayer({ guide, brand }: { guide: Guide; brand?: BrandKit }) {
+export function PlaybackPlayer({
+  guide,
+  brand,
+  trackId,
+  source,
+}: {
+  guide: Guide;
+  brand?: BrandKit;
+  /** When set, beacon view/complete events for this guide id. */
+  trackId?: string;
+  source?: "public" | "embed";
+}) {
   const kit = brand ?? DEFAULT_BRAND;
   const hasCover = guide.showCover !== false;
 
@@ -44,6 +55,39 @@ export function PlaybackPlayer({ guide, brand }: { guide: Guide; brand?: BrandKi
     }
   }, []);
 
+  // ---- viewer analytics (public/embed only) ----
+  const viewedRef = useRef(false);
+  const completedRef = useRef(false);
+  const beacon = useCallback(
+    (type: "view" | "complete") => {
+      if (!trackId) return;
+      const url = `/api/guides/${trackId}/events`;
+      const body = JSON.stringify({ type, source: source ?? "public" });
+      try {
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+        } else {
+          void fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+            keepalive: true,
+          });
+        }
+      } catch {
+        /* analytics is best-effort */
+      }
+    },
+    [trackId, source],
+  );
+
+  useEffect(() => {
+    if (trackId && !viewedRef.current) {
+      viewedRef.current = true;
+      beacon("view");
+    }
+  }, [trackId, beacon]);
+
   // Narrate + auto-advance whenever we are playing on a given slide.
   useEffect(() => {
     if (!playing || !current) return;
@@ -53,8 +97,15 @@ export function PlaybackPlayer({ guide, brand }: { guide: Guide; brand?: BrandKi
 
     const advance = () => {
       if (cancelled) return;
-      if (index < slides.length - 1) setIndex((i) => i + 1);
-      else setPlaying(false);
+      if (index < slides.length - 1) {
+        setIndex((i) => i + 1);
+      } else {
+        setPlaying(false);
+        if (!completedRef.current) {
+          completedRef.current = true;
+          beacon("complete");
+        }
+      }
     };
 
     const narration =
@@ -86,7 +137,7 @@ export function PlaybackPlayer({ guide, brand }: { guide: Guide; brand?: BrandKi
       if (timer) clearTimeout(timer);
       stopAudio();
     };
-  }, [playing, index, muted, rate, current, slides.length, guide.title, guide.subtitle, stopAudio]);
+  }, [playing, index, muted, rate, current, slides.length, guide.title, guide.subtitle, stopAudio, beacon]);
 
   const togglePlay = () => {
     if (atEnd && !playing) {

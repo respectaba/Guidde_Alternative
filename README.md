@@ -4,7 +4,8 @@ Capture, edit, narrate, and share step-by-step how-to guides. A Chrome extension
 records a click-by-click walkthrough on any website; a Next.js web app turns it
 into an annotated, narrated, shareable guide — with playback, blur/annotation
 tools, cinematic zoom, real AI voiceover, **MP4 video export**, **branded cover
-slides**, public share links, and PDF export. Multi-user, with per-account ownership.
+slides**, public share links, an **embeddable player**, **view analytics**, and
+PDF export. Multi-user, with per-account ownership.
 
 <sub>Manifest V3 extension + Next.js (App Router) + TypeScript + Prisma/SQLite + ffmpeg.</sub>
 
@@ -152,6 +153,17 @@ node scripts/tts-smoke.mjs demo@example.com password123
   and the opening segment in the **MP4** (with the title narrated when server TTS
   is available). Per-guide **subtitle** and a **show/hide cover** toggle live in
   the editor's Cover panel; brand assets come from the brand kit.
+
+## Sharing, embedding & analytics
+
+- **Public link** (`/guide/[slug]`) and a **chromeless embeddable player**
+  (`/embed/[slug]`) — the editor's Share menu has copy-paste **link** and
+  **`<iframe>` embed** snippets. The embed route renders without site chrome
+  (root layout goes chromeless for `/embed` via a pathname header from middleware).
+- **View analytics**: `view` and `complete` events are recorded for **public**
+  guides (from the public page and embeds) via `POST /api/guides/:id/events`.
+  Owners see per-guide **view counts on the dashboard** and a 7-day **analytics
+  panel** in the editor (`GET /api/guides/:id/stats`, owner-only).
 
 ## Video export
 

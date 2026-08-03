@@ -5,6 +5,7 @@
 import { nanoid } from "nanoid";
 import type { Guide, Step, CreateGuideInput, UpdateGuideInput } from "@guide/shared";
 import { prisma } from "./db";
+import { viewCounts } from "./analytics";
 
 // The Prisma row shape (steps stored as a JSON string).
 interface GuideRow {
@@ -49,6 +50,7 @@ export interface GuideSummary {
   isPublic: boolean;
   stepCount: number;
   thumbnail: string | null;
+  views: number;
   updatedAt: string;
 }
 
@@ -57,6 +59,7 @@ export async function listGuides(userId: string): Promise<GuideSummary[]> {
     where: { userId },
     orderBy: { updatedAt: "desc" },
   });
+  const views = await viewCounts(rows.map((r) => r.id));
   return rows.map((row) => {
     const guide = rowToGuide(row as GuideRow);
     return {
@@ -66,6 +69,7 @@ export async function listGuides(userId: string): Promise<GuideSummary[]> {
       isPublic: guide.isPublic,
       stepCount: guide.steps.length,
       thumbnail: guide.steps[0]?.screenshot ?? null,
+      views: views.get(guide.id) ?? 0,
       updatedAt: guide.updatedAt,
     };
   });

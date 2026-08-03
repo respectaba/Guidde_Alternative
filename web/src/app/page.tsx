@@ -60,6 +60,8 @@ export default async function DashboardPage() {
                   <span className={`badge ${g.isPublic ? "public" : "private"}`}>
                     {g.isPublic ? "Public" : "Private"}
                   </span>
+                  <span>·</span>
+                  <span title="Views">👁 {g.views}</span>
                 </div>
               </div>
               <div className="actions">
