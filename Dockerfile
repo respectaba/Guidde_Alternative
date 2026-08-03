@@ -2,7 +2,7 @@
 # Build context is the monorepo root so the shared workspace package is available.
 
 # ---- deps: install all workspace dependencies ----
-FROM node:20-bookworm-slim AS deps
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY packages/shared/package.json packages/shared/
@@ -11,7 +11,7 @@ COPY extension/package.json extension/
 RUN npm ci
 
 # ---- builder: generate Prisma client + build Next standalone ----
-FROM node:20-bookworm-slim AS builder
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # Datasource provider baked into the schema at build time (Prisma pins it there).
@@ -27,7 +27,7 @@ RUN node scripts/set-db-provider.mjs \
   && npm run build -w web
 
 # ---- runner: minimal runtime image ----
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -37,7 +37,7 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 # Fonts for server-side canvas text (cover/outro slides) rendered by @napi-rs/canvas.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+  && apt-get install -y --no-install-recommends openssl fontconfig fonts-dejavu-core \
   && rm -rf /var/lib/apt/lists/*
 
 # Next standalone server + static assets. Paths reflect the monorepo tracing root.
