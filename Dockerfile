@@ -52,10 +52,11 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-# Writable media dir for the local storage driver (mount a volume in production,
-# or set STORAGE_DRIVER=s3 to offload to object storage).
+# Writable media dir for the local storage driver. With STORAGE_DRIVER=s3 this
+# stays empty. (No VOLUME instruction: some platforms — e.g. Railway — reject it
+# and provide their own volume mechanism; attach one at this path if you use the
+# local driver.)
 RUN mkdir -p /app/web/.media
-VOLUME ["/app/web/.media"]
 
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]
