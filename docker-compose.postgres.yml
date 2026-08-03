@@ -1,13 +1,12 @@
 # Production-style stack: Postgres database + the web app with S3 storage.
 #
-# Prisma pins the datasource provider in the schema, so before building with
-# Postgres, change ONE line in web/prisma/schema.prisma:
-#     datasource db { provider = "postgresql"  url = env("DATABASE_URL") }
-# then:  docker compose -f docker-compose.postgres.yml up --build
+# The build arg DATABASE_PROVIDER=postgresql sets the Prisma provider at build
+# time, and the entrypoint runs `prisma db push` to create the Postgres schema
+# on boot — no manual schema edits needed. Just:
+#     docker compose -f docker-compose.postgres.yml up --build
 #
-# Set S3_* / AWS_* to point at your bucket (AWS S3, Cloudflare R2, MinIO, …),
-# and run `npm i @aws-sdk/client-s3` (added to web/package.json) so the S3 driver
-# is available in the image.
+# Set S3_* / AWS_* to point at your bucket (AWS S3, Cloudflare R2, MinIO, …);
+# the S3 SDK ships as an optional dependency and is bundled into the image.
 services:
   db:
     image: postgres:16-alpine
@@ -28,6 +27,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        DATABASE_PROVIDER: postgresql
     depends_on:
       db:
         condition: service_healthy

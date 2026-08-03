@@ -14,12 +14,16 @@ RUN npm ci
 FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+# Datasource provider baked into the schema at build time (Prisma pins it there).
+# Override with: docker build --build-arg DATABASE_PROVIDER=postgresql ...
+ARG DATABASE_PROVIDER=sqlite
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma client is generated against the schema; DATABASE_URL is only needed at
 # runtime, but a placeholder lets `prisma generate` run at build time.
 ENV DATABASE_URL="file:./dev.db"
-RUN npx prisma generate --schema web/prisma/schema.prisma \
+RUN node scripts/set-db-provider.mjs \
+  && npx prisma generate --schema web/prisma/schema.prisma \
   && npm run build -w web
 
 # ---- runner: minimal runtime image ----

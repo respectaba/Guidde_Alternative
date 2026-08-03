@@ -229,15 +229,22 @@ entrypoint runs `prisma migrate deploy` on boot.
 # SQLite, works out of the box (data + media on named volumes):
 docker compose up --build            # → http://localhost:3000
 
-# Postgres + S3 (production): first set the datasource provider to "postgresql"
-# in web/prisma/schema.prisma, then:
+# Postgres + S3 (production) — no manual schema edits:
 docker compose -f docker-compose.postgres.yml up --build
 ```
 
-Set `AUTH_SECRET` and `ENCRYPTION_KEY` to long random values, mount a volume for
-`.media` (or use S3), and put a TLS-terminating proxy in front. Prisma pins the
-datasource provider in the schema, so Postgres requires the one-line provider
-change above (plus a Postgres `DATABASE_URL`).
+The database schema is created on boot by the entrypoint (`migrate deploy` for
+SQLite, `prisma db push` for Postgres/MySQL). Prisma pins the datasource provider
+in the schema, so the Postgres image bakes it in at build time via the
+`DATABASE_PROVIDER=postgresql` build arg (`scripts/set-db-provider.mjs`) — the
+Postgres compose file sets this for you. Set `AUTH_SECRET` and `ENCRYPTION_KEY` to
+long random values, mount a volume for `.media` (or use S3), and put a
+TLS-terminating proxy in front.
+
+**Local database:** `npm run db:migrate -w web` creates/updates the dev SQLite DB
+and `npm run db:seed -w web` loads demo users, workspaces and guides
+(`demo@example.com` / `password123`, plus a `teammate@example.com` member in the
+shared "Acme Team" workspace).
 
 ## Tests
 

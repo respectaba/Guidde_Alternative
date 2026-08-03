@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 
 const DEMO_EMAIL = "demo@example.com";
 const DEMO_PASSWORD = "password123";
+const TEAMMATE_EMAIL = "teammate@example.com";
 
 // Mirror lib/auth.ts hashPassword (scrypt salt:hash) — seed can't import app code.
 function hashPassword(password: string): string {
@@ -187,52 +188,98 @@ function buildSettingsSteps(): Step[] {
 }
 
 async function main() {
-  console.log("Seeding demo user + guides…");
+  console.log("Seeding demo users, workspaces + guides…");
 
-  // Demo account (idempotent).
+  // Demo accounts (idempotent).
   const demo = await prisma.user.upsert({
     where: { email: DEMO_EMAIL },
     update: {},
     create: { email: DEMO_EMAIL, passwordHash: hashPassword(DEMO_PASSWORD) },
   });
+  const teammate = await prisma.user.upsert({
+    where: { email: TEAMMATE_EMAIL },
+    update: {},
+    create: { email: TEAMMATE_EMAIL, passwordHash: hashPassword(DEMO_PASSWORD) },
+  });
 
-  // Reset this user's demo guides (and any legacy fixed-slug rows) so re-seeding is clean.
+  // Reset prior demo data so re-seeding is clean: dropping the demo users'
+  // workspaces cascades their memberships and guides; also clear any legacy
+  // fixed-slug / creator-owned rows that predate workspaces.
+  const priorWs = await prisma.membership.findMany({
+    where: { userId: { in: [demo.id, teammate.id] } },
+    select: { workspaceId: true },
+  });
+  await prisma.workspace.deleteMany({
+    where: { id: { in: [...new Set(priorWs.map((m) => m.workspaceId))] } },
+  });
   await prisma.guide.deleteMany({
     where: {
-      OR: [{ userId: demo.id }, { publicSlug: { in: ["demo-onboarding", "demo-security"] } }],
+      OR: [
+        { userId: { in: [demo.id, teammate.id] } },
+        { publicSlug: { in: ["demo-onboarding", "demo-security"] } },
+      ],
     },
   });
 
+  // Demo user's personal workspace (owner) + a shared team workspace with the
+  // teammate as editor — exercises the roles/collaboration flow.
+  const personal = await prisma.workspace.create({
+    data: {
+      name: "demo's workspace",
+      personal: true,
+      memberships: { create: { userId: demo.id, role: "owner" } },
+    },
+  });
+  await prisma.workspace.create({
+    data: {
+      name: "teammate's workspace",
+      personal: true,
+      memberships: { create: { userId: teammate.id, role: "owner" } },
+    },
+  });
+  const team = await prisma.workspace.create({
+    data: {
+      name: "Acme Team",
+      personal: false,
+      memberships: {
+        create: [
+          { userId: demo.id, role: "owner" },
+          { userId: teammate.id, role: "editor" },
+        ],
+      },
+    },
+  });
+
+  // Two guides in the personal workspace…
   await prisma.guide.create({
     data: {
       title: "How to create your first project",
       publicSlug: "demo-onboarding",
       isPublic: true,
       userId: demo.id,
-      steps: JSON.stringify(
-        buildOnboardingSteps().map((s, i) => ({ ...s, order: i })),
-      ),
+      workspaceId: personal.id,
+      steps: JSON.stringify(buildOnboardingSteps().map((s, i) => ({ ...s, order: i }))),
     },
   });
-
   await prisma.guide.create({
     data: {
       title: "Enabling two-factor authentication",
       publicSlug: "demo-security",
       isPublic: false,
       userId: demo.id,
-      steps: JSON.stringify(
-        buildSettingsSteps().map((s, i) => ({ ...s, order: i })),
-      ),
+      workspaceId: personal.id,
+      steps: JSON.stringify(buildSettingsSteps().map((s, i) => ({ ...s, order: i }))),
     },
   });
 
+  // …and one shared with the team.
   await prisma.guide.create({
     data: {
       title: "Quick tour of the dashboard",
       publicSlug: nanoid(12),
       isPublic: true,
       userId: demo.id,
+      workspaceId: team.id,
       steps: JSON.stringify(
         buildOnboardingSteps()
           .slice(0, 2)
@@ -241,8 +288,12 @@ async function main() {
     },
   });
 
-  const count = await prisma.guide.count({ where: { userId: demo.id } });
-  console.log(`Done. Demo login: ${DEMO_EMAIL} / ${DEMO_PASSWORD} — ${count} guides.`);
+  const personalCount = await prisma.guide.count({ where: { workspaceId: personal.id } });
+  const teamCount = await prisma.guide.count({ where: { workspaceId: team.id } });
+  console.log(
+    `Done. Login: ${DEMO_EMAIL} / ${DEMO_PASSWORD} (also ${TEAMMATE_EMAIL}). ` +
+      `Personal workspace: ${personalCount} guides; "Acme Team": ${teamCount} guide.`,
+  );
 }
 
 main()
