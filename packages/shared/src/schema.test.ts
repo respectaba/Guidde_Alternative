@@ -52,6 +52,12 @@ describe("schema validation", () => {
     expect(updateGuideSchema.safeParse({ isPublic: true }).success).toBe(true);
   });
 
+  it("accepts cover fields (subtitle, showCover) on update", () => {
+    expect(updateGuideSchema.safeParse({ subtitle: "A quick tour", showCover: true }).success).toBe(true);
+    expect(updateGuideSchema.safeParse({ subtitle: null }).success).toBe(true);
+    expect(updateGuideSchema.safeParse({ showCover: false }).success).toBe(true);
+  });
+
   it("validates an arrow annotation shape", () => {
     const step = validStep();
     step.annotations = [

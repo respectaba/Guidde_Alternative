@@ -11,9 +11,9 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import type { Guide, Step } from "@guide/shared";
+import type { BrandKit, Guide, Step } from "@guide/shared";
 import { clamp01 } from "@guide/shared";
-import { drawFrame } from "./frame";
+import { drawCover, drawFrame } from "./frame";
 import { mediaDir } from "@/lib/media/store";
 import { serverTtsAvailable, synthesize, type TtsConfig } from "@/lib/ai/tts";
 import { saveMedia } from "@/lib/media/store";
@@ -151,14 +151,75 @@ async function renderStepSegment(
   return seg;
 }
 
+/** Render the branded cover as a single held image + optional title narration. */
+async function renderCoverSegment(
+  guide: Guide,
+  brand: BrandKit,
+  workDir: string,
+  tts: TtsConfig,
+): Promise<string> {
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext("2d");
+  let logo = null;
+  if (brand.logo) {
+    try {
+      logo = await loadImage(dataUrlToBuffer(brand.logo));
+    } catch {
+      /* ignore bad logo */
+    }
+  }
+  drawCover(ctx, {
+    W,
+    H,
+    title: guide.title,
+    subtitle: guide.subtitle,
+    accent: brand.accentColor || "#6366f1",
+    brandName: brand.name,
+    logo,
+  });
+  const coverPng = join(workDir, "cover.png");
+  await writeFile(coverPng, canvas.toBuffer("image/png"));
+
+  // Narrate the title over the cover when server TTS is available; else hold silent.
+  const narration = [guide.title, guide.subtitle].filter(Boolean).join(". ");
+  let audioPath: string | null = null;
+  if (serverTtsAvailable(tts)) {
+    try {
+      const { audio, ext } = await synthesize(narration, tts);
+      audioPath = join(workDir, `cover.${ext}`);
+      await writeFile(audioPath, audio);
+    } catch {
+      audioPath = null;
+    }
+  }
+  const duration = (audioPath ? await probeDuration(audioPath) : null) ?? 3.5;
+
+  const seg = join(workDir, "seg-cover.mp4");
+  const args = ["-y", "-loop", "1", "-i", coverPng];
+  if (audioPath) args.push("-i", audioPath);
+  else args.push("-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo");
+  args.push(
+    "-t", duration.toFixed(3),
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", String(FPS),
+    "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "128k",
+    "-shortest", seg,
+  );
+  await ffmpeg(args);
+  return seg;
+}
+
 export async function exportGuideToVideo(
   guide: Guide,
   tts: TtsConfig,
+  brand: BrandKit,
 ): Promise<Buffer> {
   if (guide.steps.length === 0) throw new Error("Guide has no steps.");
   const workDir = await mkdtemp(join(tmpdir(), "vid-"));
   try {
     const segs: string[] = [];
+    if (guide.showCover !== false) {
+      segs.push(await renderCoverSegment(guide, brand, workDir, tts));
+    }
     for (let i = 0; i < guide.steps.length; i++) {
       segs.push(await renderStepSegment(guide, guide.steps[i], workDir, i, tts));
     }

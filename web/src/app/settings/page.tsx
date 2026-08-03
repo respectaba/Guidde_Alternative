@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import { TokenManager } from "@/components/auth/TokenManager";
 import { TtsSettings } from "@/components/auth/TtsSettings";
+import { BrandKitSettings } from "@/components/auth/BrandKitSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function SettingsPage() {
           <p className="muted">Voiceover keys and extension tokens for your account.</p>
         </div>
       </div>
+      <BrandKitSettings />
       <TtsSettings />
       <h2 style={{ fontSize: 20, marginTop: 8 }}>API tokens</h2>
       <p className="muted" style={{ marginTop: 0 }}>

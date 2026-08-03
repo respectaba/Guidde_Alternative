@@ -3,8 +3,8 @@
 Capture, edit, narrate, and share step-by-step how-to guides. A Chrome extension
 records a click-by-click walkthrough on any website; a Next.js web app turns it
 into an annotated, narrated, shareable guide — with playback, blur/annotation
-tools, cinematic zoom, real AI voiceover, **MP4 video export**, public share
-links, and PDF export. Multi-user, with per-account ownership.
+tools, cinematic zoom, real AI voiceover, **MP4 video export**, **branded cover
+slides**, public share links, and PDF export. Multi-user, with per-account ownership.
 
 <sub>Manifest V3 extension + Next.js (App Router) + TypeScript + Prisma/SQLite + ffmpeg.</sub>
 
@@ -141,6 +141,17 @@ With the server running and a key set (Settings, or `TTS_API_KEY` in `web/.env`)
 node scripts/tts-smoke.mjs demo@example.com password123
 # logs in, POSTs /api/ai/tts, writes scratch out.mp3, prints bytes + engine
 ```
+
+## Branding & cover slides
+
+- **Brand kit** (per tenant, **Settings → Brand kit**): logo (uploaded, downscaled
+  client-side, stored as a data URL), accent color, and brand name. Applied to
+  cover slides and exports, and used as the default annotation color in the editor.
+- **Cover slide**: every guide gets a branded title card (logo, title, subtitle,
+  accent gradient) as the first slide in **playback**, the first page in **PDF**,
+  and the opening segment in the **MP4** (with the title narrated when server TTS
+  is available). Per-guide **subtitle** and a **show/hide cover** toggle live in
+  the editor's Cover panel; brand assets come from the brand kit.
 
 ## Video export
 

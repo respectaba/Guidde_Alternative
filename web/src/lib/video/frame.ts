@@ -57,6 +57,96 @@ function roundRect(ctx: SKRSContext2D, x: number, y: number, w: number, h: numbe
   ctx.closePath();
 }
 
+function shadeHex(hex: string, pct: number): string {
+  const m = hex.replace("#", "");
+  const full = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
+  const num = parseInt(full, 16);
+  if (Number.isNaN(num)) return hex;
+  const amt = Math.round(2.55 * pct);
+  const c = (v: number) => Math.max(0, Math.min(255, v));
+  const r = c((num >> 16) + amt);
+  const g = c(((num >> 8) & 0xff) + amt);
+  const b = c((num & 0xff) + amt);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function wrapLines(ctx: SKRSContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = w;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/** Draw a branded cover frame (accent gradient, logo/name, title, subtitle). */
+export function drawCover(
+  ctx: SKRSContext2D,
+  opts: { W: number; H: number; title: string; subtitle?: string | null; accent: string; brandName?: string | null; logo?: Image | null },
+) {
+  const { W, H, title, subtitle, accent, brandName, logo } = opts;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, accent);
+  grad.addColorStop(1, shadeHex(accent, -28));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (logo) {
+    const maxH = H * 0.2;
+    const ar = logo.width / logo.height;
+    const h = Math.min(maxH, logo.height);
+    const w = h * ar;
+    ctx.drawImage(logo, (W - w) / 2, H * 0.16, w, h);
+  } else if (brandName) {
+    ctx.font = `600 ${Math.round(H * 0.04)}px sans-serif`;
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(brandName, W / 2, H * 0.24);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.font = `700 ${Math.round(H * 0.078)}px sans-serif`;
+  const titleLines = wrapLines(ctx, title, W * 0.82);
+  const lh = H * 0.092;
+  let y = H * 0.46 - ((titleLines.length - 1) * lh) / 2;
+  for (const l of titleLines) {
+    ctx.fillText(l, W / 2, y);
+    y += lh;
+  }
+
+  if (subtitle) {
+    ctx.font = `400 ${Math.round(H * 0.035)}px sans-serif`;
+    ctx.globalAlpha = 0.92;
+    const subLines = wrapLines(ctx, subtitle, W * 0.7);
+    y += H * 0.02;
+    for (const l of subLines) {
+      ctx.fillText(l, W / 2, y);
+      y += H * 0.05;
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.font = `400 ${Math.round(H * 0.022)}px sans-serif`;
+  ctx.globalAlpha = 0.8;
+  ctx.fillText(`${brandName ? brandName + " · " : ""}Made with Guideflow`, W / 2, H * 0.92);
+  ctx.globalAlpha = 1;
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
 export interface FrameOpts {
   W: number;
   H: number;

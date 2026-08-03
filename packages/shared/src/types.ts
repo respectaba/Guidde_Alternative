@@ -99,9 +99,22 @@ export interface Step {
   audioUrl?: string;
 }
 
+/** Per-tenant branding applied to cover slides and exports. */
+export interface BrandKit {
+  name: string | null;
+  /** Logo as a data URL, or null. */
+  logo: string | null;
+  /** Accent color hex, e.g. "#6366f1". */
+  accentColor: string;
+}
+
 export interface Guide {
   id: string;
   title: string;
+  /** Optional cover subtitle. */
+  subtitle?: string | null;
+  /** Whether to show the cover slide in playback/exports. */
+  showCover?: boolean;
   /** Opaque slug used in the public share URL (/guide/[slug]). */
   publicSlug: string;
   isPublic: boolean;
@@ -124,6 +137,8 @@ export interface CreateGuideInput {
 /** Fields the editor can PATCH on an existing guide. */
 export interface UpdateGuideInput {
   title?: string;
+  subtitle?: string | null;
+  showCover?: boolean;
   isPublic?: boolean;
   steps?: Step[];
 }

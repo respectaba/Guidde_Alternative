@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getGuideBySlug } from "@/lib/guides";
+import { getBrandKit } from "@/lib/brand";
 import { PlaybackPlayer } from "@/components/playback/PlaybackPlayer";
 import { ExportButton } from "@/components/export/ExportButton";
 
@@ -14,6 +15,8 @@ export default async function PublicGuidePage({
   const guide = await getGuideBySlug(params.slug);
   if (!guide || !guide.isPublic) notFound();
 
+  const brand = await getBrandKit(guide.userId);
+
   return (
     <main>
       <div className="page-head">
@@ -25,7 +28,7 @@ export default async function PublicGuidePage({
           </p>
         </div>
         <div className="row">
-          <ExportButton guide={guide} />
+          <ExportButton guide={guide} brand={brand} />
           <Link href="/" className="btn small ghost">
             Made with Guideflow
           </Link>
@@ -33,7 +36,7 @@ export default async function PublicGuidePage({
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <PlaybackPlayer guide={guide} />
+        <PlaybackPlayer guide={guide} brand={brand} />
       </div>
     </main>
   );

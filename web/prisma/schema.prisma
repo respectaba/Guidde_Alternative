@@ -20,6 +20,18 @@ model User {
   guides       Guide[]
   tokens       ApiToken[]
   ttsSetting   TtsSetting?
+  brandKit     BrandKit?
+}
+
+// Per-tenant branding applied to guide cover slides and exports.
+model BrandKit {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String?
+  logo        String? // data URL
+  accentColor String   @default("#6366f1")
+  updatedAt   DateTime @updatedAt
 }
 
 // Per-tenant "bring your own key" TTS config. The API key is encrypted at rest
@@ -53,6 +65,8 @@ model ApiToken {
 model Guide {
   id         String   @id @default(cuid())
   title      String
+  subtitle   String?
+  showCover  Boolean  @default(true)
   publicSlug String   @unique
   isPublic   Boolean  @default(false)
   // JSON-serialized Step[] (screenshots, click points, annotations, blur regions)

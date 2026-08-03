@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { Guide, Step } from "@guide/shared";
+import type { BrandKit, Guide, Step } from "@guide/shared";
 import { StepList } from "./StepList";
 import { StepCanvas, type Selection, type Tool } from "./StepCanvas";
 import { AnnotationToolbar } from "./AnnotationToolbar";
@@ -13,11 +13,17 @@ import "./editor.css";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
+export function EditorShell({
+  initialGuide,
+  brand,
+}: {
+  initialGuide: Guide;
+  brand?: BrandKit;
+}) {
   const [guide, setGuide] = useState<Guide>(initialGuide);
   const [activeIndex, setActiveIndex] = useState(0);
   const [tool, setTool] = useState<Tool>("select");
-  const [color, setColor] = useState("#f59e0b");
+  const [color, setColor] = useState(brand?.accentColor ?? "#f59e0b");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [preview, setPreview] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -42,6 +48,8 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: guide.title,
+            subtitle: guide.subtitle ?? null,
+            showCover: guide.showCover !== false,
             isPublic: guide.isPublic,
             steps: guide.steps,
           }),
@@ -188,7 +196,7 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
           >
             {rendering ? "Rendering…" : "🎬 Export MP4"}
           </button>
-          <ExportButton guide={guide} />
+          <ExportButton guide={guide} brand={brand} />
         </div>
       </div>
 
@@ -210,7 +218,7 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
 
       {preview ? (
         <div style={{ maxWidth: 900, margin: "20px auto" }}>
-          <PlaybackPlayer guide={guide} />
+          <PlaybackPlayer guide={guide} brand={brand} />
         </div>
       ) : (
         <div className="editor-body">
@@ -245,6 +253,42 @@ export function EditorShell({ initialGuide }: { initialGuide: Guide }) {
           </section>
 
           <aside className="editor-right">
+            <div className="caption-editor">
+              <div className="row" style={{ justifyContent: "space-between" }}>
+                <label className="muted" style={{ fontSize: 13, fontWeight: 600 }}>
+                  Cover slide
+                </label>
+                <label className="row" style={{ gap: 6, fontSize: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={guide.showCover !== false}
+                    onChange={(e) => setGuide((g) => ({ ...g, showCover: e.target.checked }))}
+                  />
+                  Show
+                </label>
+              </div>
+              <input
+                value={guide.subtitle ?? ""}
+                onChange={(e) => setGuide((g) => ({ ...g, subtitle: e.target.value }))}
+                placeholder="Subtitle (optional)"
+                style={{
+                  width: "100%",
+                  background: "var(--bg-panel)",
+                  color: "var(--text)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 14,
+                }}
+              />
+              <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                Logo &amp; accent come from your{" "}
+                <Link href="/settings" style={{ color: "var(--accent)" }}>
+                  brand kit
+                </Link>
+                .
+              </p>
+            </div>
             <AnnotationToolbar
               tool={tool}
               setTool={setTool}

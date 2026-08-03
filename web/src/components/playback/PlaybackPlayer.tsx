@@ -1,25 +1,40 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { Guide } from "@guide/shared";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { BrandKit, Guide, Step } from "@guide/shared";
 import { StepFrame } from "../frame/StepFrame";
+import { CoverSlide } from "./CoverSlide";
 import { speak, cancelSpeech, type SpeakHandle } from "@/lib/ai/clientTts";
+import { DEFAULT_ACCENT } from "@/lib/brandConstants";
 import "./playback.css";
 
+type Slide = { kind: "cover" } | { kind: "step"; step: Step; stepNo: number };
+
+const DEFAULT_BRAND: BrandKit = { name: null, logo: null, accentColor: DEFAULT_ACCENT };
+
 /**
- * Plays a guide back like a video: renders each step's annotated screenshot,
- * pings the click point, narrates the caption via TTS, and auto-advances when
- * narration ends. Works read-only for both the editor preview and public view.
+ * Plays a guide back like a video: an optional branded cover slide, then each
+ * step's annotated screenshot with click ping, zoom, and TTS narration,
+ * auto-advancing when narration ends. Read-only (editor preview + public view).
  */
-export function PlaybackPlayer({ guide }: { guide: Guide }) {
-  const steps = guide.steps;
+export function PlaybackPlayer({ guide, brand }: { guide: Guide; brand?: BrandKit }) {
+  const kit = brand ?? DEFAULT_BRAND;
+  const hasCover = guide.showCover !== false;
+
+  const slides = useMemo<Slide[]>(() => {
+    const list: Slide[] = [];
+    if (hasCover) list.push({ kind: "cover" });
+    guide.steps.forEach((step, i) => list.push({ kind: "step", step, stepNo: i }));
+    return list;
+  }, [guide.steps, hasCover]);
+
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
   const [rate, setRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const step = steps[index];
-  const atEnd = index >= steps.length - 1;
+  const current = slides[index];
+  const atEnd = index >= slides.length - 1;
 
   const stopAudio = useCallback(() => {
     cancelSpeech();
@@ -29,25 +44,30 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
     }
   }, []);
 
-  // Narrate + auto-advance whenever we are playing on a given step.
+  // Narrate + auto-advance whenever we are playing on a given slide.
   useEffect(() => {
-    if (!playing || !step) return;
+    if (!playing || !current) return;
     let cancelled = false;
     let handle: SpeakHandle | null = null;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const advance = () => {
       if (cancelled) return;
-      if (index < steps.length - 1) setIndex((i) => i + 1);
+      if (index < slides.length - 1) setIndex((i) => i + 1);
       else setPlaying(false);
     };
 
-    const dwellMs = Math.max(2500, step.caption.split(/\s+/).length * 320);
+    const narration =
+      current.kind === "cover"
+        ? [guide.title, guide.subtitle].filter(Boolean).join(". ")
+        : current.step.caption;
+    const audioUrl = current.kind === "step" ? current.step.audioUrl : undefined;
+    const dwellMs = Math.max(2800, narration.split(/\s+/).length * 320);
 
     if (muted) {
       timer = setTimeout(advance, dwellMs / Math.max(0.5, rate));
-    } else if (step.audioUrl) {
-      const audio = new Audio(step.audioUrl);
+    } else if (audioUrl) {
+      const audio = new Audio(audioUrl);
       audio.playbackRate = rate;
       audioRef.current = audio;
       audio.onended = advance;
@@ -56,7 +76,7 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
         timer = setTimeout(advance, dwellMs);
       });
     } else {
-      handle = speak(step.caption, rate);
+      handle = speak(narration, rate);
       handle.done.then(advance);
     }
 
@@ -66,7 +86,7 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
       if (timer) clearTimeout(timer);
       stopAudio();
     };
-  }, [playing, index, muted, rate, step, steps.length, stopAudio]);
+  }, [playing, index, muted, rate, current, slides.length, guide.title, guide.subtitle, stopAudio]);
 
   const togglePlay = () => {
     if (atEnd && !playing) {
@@ -79,51 +99,46 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
 
   const goTo = (i: number) => {
     stopAudio();
-    setIndex(Math.max(0, Math.min(steps.length - 1, i)));
+    setIndex(Math.max(0, Math.min(slides.length - 1, i)));
   };
 
-  if (!step) {
+  if (!current) {
     return <div className="muted">This guide has no steps yet.</div>;
   }
+
+  const label =
+    current.kind === "cover" ? "Cover" : `${current.stepNo + 1} / ${guide.steps.length}`;
+  const caption =
+    current.kind === "cover" ? guide.title : current.step.caption;
 
   return (
     <div className="player">
       <div className="player-stage">
-        <StepFrame
-          key={`${step.id}-${playing ? "play" : "pause"}`}
-          step={step}
-          animateClick={playing}
-          zoomActive={playing}
-        />
+        {current.kind === "cover" ? (
+          <CoverSlide title={guide.title} subtitle={guide.subtitle} brand={kit} />
+        ) : (
+          <StepFrame
+            key={`${current.step.id}-${playing ? "play" : "pause"}`}
+            step={current.step}
+            animateClick={playing}
+            zoomActive={playing}
+          />
+        )}
       </div>
 
       <div className="player-caption">
-        <span className="step-index">
-          {index + 1} / {steps.length}
-        </span>
-        <p>{step.caption}</p>
+        <span className="step-index">{label}</span>
+        <p>{caption}</p>
       </div>
 
       <div className="player-controls">
-        <button
-          className="btn small"
-          onClick={() => goTo(index - 1)}
-          disabled={index === 0}
-          aria-label="Previous step"
-        >
+        <button className="btn small" onClick={() => goTo(index - 1)} disabled={index === 0} aria-label="Previous">
           ◀ Prev
         </button>
-
         <button className="btn primary" onClick={togglePlay} aria-label="Play or pause">
           {playing ? "❚❚ Pause" : atEnd ? "↻ Replay" : "▶ Play"}
         </button>
-
-        <button
-          className="btn small"
-          onClick={() => goTo(index + 1)}
-          disabled={atEnd}
-          aria-label="Next step"
-        >
+        <button className="btn small" onClick={() => goTo(index + 1)} disabled={atEnd} aria-label="Next">
           Next ▶
         </button>
 
@@ -140,11 +155,7 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
 
         <label className="rate">
           Speed
-          <select
-            value={rate}
-            onChange={(e) => setRate(Number(e.target.value))}
-            aria-label="Playback speed"
-          >
+          <select value={rate} onChange={(e) => setRate(Number(e.target.value))} aria-label="Playback speed">
             <option value={0.75}>0.75×</option>
             <option value={1}>1×</option>
             <option value={1.25}>1.25×</option>
@@ -154,13 +165,13 @@ export function PlaybackPlayer({ guide }: { guide: Guide }) {
       </div>
 
       <div className="player-scrubber">
-        {steps.map((s, i) => (
+        {slides.map((s, i) => (
           <button
-            key={s.id}
+            key={s.kind === "cover" ? "cover" : s.step.id}
             className={`seg ${i === index ? "active" : ""} ${i < index ? "done" : ""}`}
             onClick={() => goTo(i)}
-            aria-label={`Go to step ${i + 1}`}
-            title={s.caption}
+            aria-label={s.kind === "cover" ? "Cover" : `Go to step ${s.stepNo + 1}`}
+            title={s.kind === "cover" ? "Cover" : s.step.caption}
           />
         ))}
       </div>

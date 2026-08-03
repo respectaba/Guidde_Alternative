@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getGuide } from "@/lib/guides";
 import { getSessionUser } from "@/lib/auth";
+import { getBrandKit } from "@/lib/brand";
 import { EditorShell } from "@/components/editor/EditorShell";
 
 export const dynamic = "force-dynamic";
@@ -17,5 +18,6 @@ export default async function EditorPage({
   if (!guide) notFound();
   if (guide.userId !== user.id) notFound(); // don't reveal others' guides
 
-  return <EditorShell initialGuide={guide} />;
+  const brand = await getBrandKit(user.id);
+  return <EditorShell initialGuide={guide} brand={brand} />;
 }

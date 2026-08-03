@@ -10,6 +10,8 @@ import { prisma } from "./db";
 interface GuideRow {
   id: string;
   title: string;
+  subtitle: string | null;
+  showCover: boolean;
   publicSlug: string;
   isPublic: boolean;
   steps: string;
@@ -28,6 +30,8 @@ function rowToGuide(row: GuideRow): Guide {
   return {
     id: row.id,
     title: row.title,
+    subtitle: row.subtitle,
+    showCover: row.showCover,
     publicSlug: row.publicSlug,
     isPublic: row.isPublic,
     steps,
@@ -102,6 +106,8 @@ export async function updateGuide(
 
   const data: Record<string, unknown> = {};
   if (input.title !== undefined) data.title = input.title;
+  if (input.subtitle !== undefined) data.subtitle = input.subtitle;
+  if (input.showCover !== undefined) data.showCover = input.showCover;
   if (input.isPublic !== undefined) data.isPublic = input.isPublic;
   if (input.steps !== undefined) {
     data.steps = JSON.stringify(normalizeStepOrder(input.steps));

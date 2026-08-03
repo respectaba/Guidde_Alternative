@@ -82,6 +82,8 @@ export const createGuideSchema = z.object({
 export const updateGuideSchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
+    subtitle: z.string().max(300).nullable().optional(),
+    showCover: z.boolean().optional(),
     isPublic: z.boolean().optional(),
     steps: z.array(stepSchema).optional(),
   })
