@@ -42,6 +42,16 @@ export interface StopResponse {
 
 export const DEFAULT_API_BASE = "http://localhost:3000";
 
+/** postMessage contract for one-click "Connect extension" from the web app. */
+export const CONNECT_REQUEST = "GUIDEFLOW_CONNECT";
+export const CONNECT_ACK = "GUIDEFLOW_CONNECTED";
+export interface ConnectRequest {
+  source: "guideflow-app";
+  type: typeof CONNECT_REQUEST;
+  apiBase: string;
+  token: string;
+}
+
 export async function getApiBase(): Promise<string> {
   const { apiBase } = await chrome.storage.local.get("apiBase");
   return (apiBase as string) || DEFAULT_API_BASE;

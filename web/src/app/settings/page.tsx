@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { TokenManager } from "@/components/auth/TokenManager";
 import { TtsSettings } from "@/components/auth/TtsSettings";
 import { BrandKitSettings } from "@/components/auth/BrandKitSettings";
+import { ConnectExtension } from "@/components/auth/ConnectExtension";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +21,14 @@ export default async function SettingsPage() {
       </div>
       <BrandKitSettings />
       <TtsSettings />
-      <h2 style={{ fontSize: 20, marginTop: 8 }}>API tokens</h2>
+      <h2 style={{ fontSize: 20, marginTop: 8 }}>Browser extension</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Connect the Chrome extension to your account.
+        Connect the Chrome extension to capture guides on any website.
+      </p>
+      <ConnectExtension />
+      <h3 style={{ fontSize: 16, marginTop: 8 }}>API tokens</h3>
+      <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+        Manual connection — create a token to paste into the extension yourself.
       </p>
       <TokenManager />
     </main>

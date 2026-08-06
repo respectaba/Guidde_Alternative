@@ -35,9 +35,13 @@ ENV PORT=3000
 # Bind to all interfaces. Docker/Railway set HOSTNAME to the container id, which
 # the Next standalone server would otherwise bind to (unreachable) — pin it.
 ENV HOSTNAME=0.0.0.0
-# Fonts for server-side canvas text (cover/outro slides) rendered by @napi-rs/canvas.
+# Free offline voiceover for server-side renders (video export) when no neural
+# key is set. Per-user BYO keys still take precedence; playback narration uses
+# the browser's free voice. Override with TTS_PROVIDER=browser to disable.
+ENV TTS_PROVIDER=espeak
+# openssl (Prisma), fonts (canvas cover/outro text), espeak-ng (offline TTS).
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl fontconfig fonts-dejavu-core \
+  && apt-get install -y --no-install-recommends openssl fontconfig fonts-dejavu-core espeak-ng \
   && rm -rf /var/lib/apt/lists/*
 
 # Next standalone server + static assets. Paths reflect the monorepo tracing root.

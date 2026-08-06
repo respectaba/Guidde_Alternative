@@ -4,10 +4,26 @@
  * screenshot. Capture is triggered on `mousedown` (capture phase) so the frame
  * is grabbed BEFORE a click navigates or mutates the page.
  */
-import type { RuntimeMessage, StateResponse } from "./lib/messaging";
+import type { ConnectRequest, RuntimeMessage, StateResponse } from "./lib/messaging";
+import { CONNECT_ACK, CONNECT_REQUEST } from "./lib/messaging";
 import { describeElement } from "./lib/selector";
 
 let recording = false;
+
+// One-click connect: the Guideflow web app posts its origin + a fresh API token,
+// and we store them so the popup is pre-configured (no manual paste). We only
+// accept a message whose target apiBase equals the page's own origin, so a page
+// can configure itself but not point the extension at a third-party server.
+window.addEventListener("message", (e: MessageEvent) => {
+  if (e.source !== window) return;
+  const d = e.data as Partial<ConnectRequest> | null;
+  if (!d || d.source !== "guideflow-app" || d.type !== CONNECT_REQUEST) return;
+  if (typeof d.apiBase !== "string" || typeof d.token !== "string") return;
+  if (e.origin !== d.apiBase) return; // page may only connect itself
+  void chrome.storage.local
+    .set({ apiBase: d.apiBase.replace(/\/$/, ""), apiToken: d.token })
+    .then(() => window.postMessage({ source: "guideflow-ext", type: CONNECT_ACK }, e.origin));
+});
 
 // Sync initial state (the page may load mid-recording).
 chrome.runtime.sendMessage({ type: "GET_STATE" } satisfies RuntimeMessage, (res?: StateResponse) => {
